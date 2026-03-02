@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import * as Dagre from "@dagrejs/dagre";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -10,6 +9,7 @@ import {
   type Node,
   type Edge,
   Background,
+  MiniMap,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import MessageNode from "./nodes/MessageNode";
@@ -36,55 +36,37 @@ export interface AgentVisualizerProps {
 
 const DEFAULT_NODE_WIDTH = 320;
 const DEFAULT_NODE_HEIGHT = 260;
+const FRAME_X_GAP = 80;
+const NODE_Y_GAP = 32;
 
-function getLayoutedElements(
-  nodes: Node[],
-  edges: Edge[],
-  direction: "TB" | "LR" = "TB"
-) {
-  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: direction, ranksep: 64, nodesep: 32 });
+function toFlowNodesByFrame(frameList: Frame[], upToIndex: number): Node[] {
+  const nodes: Node[] = [];
+  const maxIndex = Math.min(upToIndex, frameList.length - 1);
 
-  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-  nodes.forEach((node) =>
-    g.setNode(node.id, {
-      width: node.measured?.width ?? DEFAULT_NODE_WIDTH,
-      height: node.measured?.height ?? DEFAULT_NODE_HEIGHT,
-    })
-  );
+  for (let frameIdx = 0; frameIdx <= maxIndex; frameIdx++) {
+    const frame = frameList[frameIdx];
+    const x = frameIdx * (DEFAULT_NODE_WIDTH + FRAME_X_GAP);
 
-  Dagre.layout(g);
+    for (let nodeIdx = 0; nodeIdx < frame.nodes.length; nodeIdx++) {
+      const n = frame.nodes[nodeIdx];
+      const y = nodeIdx * (DEFAULT_NODE_HEIGHT + NODE_Y_GAP);
 
-  return {
-    nodes: nodes.map((node) => {
-      const pos = g.node(node.id);
-      const w = node.measured?.width ?? DEFAULT_NODE_WIDTH;
-      const h = node.measured?.height ?? DEFAULT_NODE_HEIGHT;
-      return { ...node, position: { x: pos.x - w / 2, y: pos.y - h / 2 } };
-    }),
-    edges,
-  };
-}
+      nodes.push({
+        id: n.id,
+        type: n.type,
+        width: DEFAULT_NODE_WIDTH,
+        height: DEFAULT_NODE_HEIGHT,
+        position: { x, y },
+        data: { ...n.data },
+      });
+    }
+  }
 
-function toFlowNodes(agentNodes: AgentNode[]): Node[] {
-  return agentNodes.map((n, i) => ({
-    id: n.id,
-    type: n.type,
-    position: { x: 0, y: i * (DEFAULT_NODE_HEIGHT + 32) },
-    data: { ...n.data},
-  }));
+  return nodes;
 }
 
 function toFlowEdges(_agentNodes: AgentNode[]): Edge[] {
   return [];
-}
-
-function getCumulativeNodes(frameList: Frame[], upToIndex: number): AgentNode[] {
-  const cumulative: AgentNode[] = [];
-  for (let i = 0; i <= upToIndex && i < frameList.length; i++) {
-    cumulative.push(...frameList[i].nodes);
-  }
-  return cumulative;
 }
 
 function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
@@ -93,10 +75,12 @@ function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
 
   const clampedIndex =
     frameList.length === 0 ? 0 : Math.min(frameIndex, frameList.length - 1);
-  const cumulativeNodes = getCumulativeNodes(frameList, clampedIndex);
+  const totalNodesUpToFrame = frameList
+    .slice(0, clampedIndex + 1)
+    .reduce((acc, f) => acc + f.nodes.length, 0);
 
-  const initialNodes = cumulativeNodes.length ? toFlowNodes(cumulativeNodes) : [];
-  const initialEdges = cumulativeNodes.length ? toFlowEdges([]) : []; // TODO: Add edges
+  const initialNodes = totalNodesUpToFrame ? toFlowNodesByFrame(frameList, clampedIndex) : [];
+  const initialEdges = totalNodesUpToFrame ? toFlowEdges([]) : []; // TODO: Add edges
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -112,14 +96,13 @@ function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
   };
 
   useEffect(() => {
-    if (!cumulativeNodes.length) return;
-    const flowNodes = toFlowNodes(cumulativeNodes);
+    if (totalNodesUpToFrame === 0) return;
+    const flowNodes = toFlowNodesByFrame(frameList, clampedIndex);
     const flowEdges = toFlowEdges([]); // TODO: Add edges
-    const layouted = getLayoutedElements(flowNodes, flowEdges, "TB");
-    setNodes(layouted.nodes);
-    setEdges(layouted.edges);
+    setNodes(flowNodes);
+    setEdges(flowEdges);
     requestAnimationFrame(() => fitView());
-  }, [clampedIndex, fitView, frameList.length]);
+  }, [clampedIndex, fitView, frames]);
 
   return (
     <div style={{ width: "100%", height: "100vh" }}>
@@ -169,6 +152,7 @@ function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
             </button>
           </div>
         </Panel>
+        <MiniMap />
       </ReactFlow>
     </div>
   );

@@ -15,7 +15,6 @@ export default defineConfig({
         "react-dom",
         "react/jsx-runtime",
         "@xyflow/react",
-        "@dagrejs/dagre",
       ],
       output: {
         globals: {
@@ -23,7 +22,6 @@ export default defineConfig({
           "react-dom": "ReactDOM",
           "react/jsx-runtime": "jsxRuntime",
           "@xyflow/react": "ReactFlow",
-          "@dagrejs/dagre": "Dagre",
         },
       },
     },
