@@ -1,33 +1,49 @@
-function MessageNode(props: any) {
-    /*
-    example props.data:
-    {
-      id: "123",
-      type: "ToolMessage",
-      data: {
-        tool_name: "multiply",
-        tool_args: {
-          a: 1,
-          b: 2
-        }
-      }
-    }
-    */
+import { Card, CardContent, Typography } from "@mui/material";
+
+type MessageNodeProps = {
+  type?: string;
+  data?: {
+    tool_args?: Record<string, unknown>;
+  };
+};
+
+function MessageNode({ type, data }: MessageNodeProps) {
+  const toolArgs = data?.tool_args;
+  const hasArgs =
+    toolArgs && typeof toolArgs === "object" && Object.keys(toolArgs).length > 0;
+
   return (
-    <div
-      style={{
-        padding: "10px 14px",
-        borderRadius: 8,
-        backgroundColor: "#e8f5e9",
-        border: "2px solid #388e3c",
-        minWidth: 140,
-      }}
+    <Card
+      variant="outlined"
+      sx={{ minWidth: 160, bgcolor: "#020617", borderColor: "#1f2937" }}
+      className="nodrag"
     >
-      <div>
-        <label htmlFor="text">Text:</label>
-        <input id="text" name="text" className="nodrag" value={JSON.stringify(props)}/>
-      </div>
-    </div>
+      <CardContent sx={{ p: 1.5 }}>
+        {type && (
+          <Typography
+            variant="caption"
+            sx={{ color: "#e5e7eb", fontWeight: 600, display: "block" }}
+          >
+            {type}
+          </Typography>
+        )}
+        {hasArgs && (
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 0.75,
+              whiteSpace: "pre-wrap",
+              fontSize: 12,
+              color: "#e5e7eb",
+            }}
+          >
+            {Object.entries(toolArgs!)
+              .map(([k, v]) => `${k}: ${String(v)}`)
+              .join("\n")}
+          </Typography>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
