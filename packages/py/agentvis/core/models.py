@@ -17,8 +17,13 @@ class Frame(BaseModel):
     nodes: list[Node]
 
 # models for LLM messages
+class ToolCall(BaseModel):
+    name: str
+    args: dict
+
 class LLMMessage(BaseModel):
     id: str
     type: MessageType
+    content: str = ""
+    tool_calls: list[ToolCall] = []
     tool_name: str = ""
-    tool_args: dict = {}

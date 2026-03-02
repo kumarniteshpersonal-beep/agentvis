@@ -4,6 +4,7 @@ type MessageNodeProps = {
   id?: string;
   type?: string;
   data?: {
+    content?: string;
     tool_name?: string;
     tool_args?: Record<string, unknown>;
   };
@@ -35,6 +36,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
   const messageType = type ?? (data as any)?.messageType ?? "Message";
   const config = TYPE_CONFIG[messageType] ?? { icon: "", color: "default" as ChipColor };
 
+  const content = data?.content;
   const toolName = data?.tool_name;
   const toolArgs = data?.tool_args;
   const hasArgs =
@@ -73,7 +75,6 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
             </Typography>
           )}
         </Stack>
-
         {toolName && (
           <Box mt={1.25}>
             <Typography
@@ -139,6 +140,52 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                   <Typography sx={{ fontSize: 12 }}>{String(v)}</Typography>
                 </Stack>
               ))}
+            </Box>
+          </Box>
+        )}
+
+        {content !== undefined && (
+          <Box mt={hasArgs || toolName ? 1.5 : 1.25}>
+            <Typography
+              variant="overline"
+              sx={{
+                fontSize: 9,
+                letterSpacing: 1.4,
+                color: "#64748b",
+                display: "block",
+              }}
+            >
+              CONTENT
+            </Typography>
+            <Box
+              sx={{
+                mt: 0.25,
+                borderRadius: 1,
+                bgcolor: "#f8fafc",
+                px: 1,
+                py: 0.75,
+                maxHeight: 120,
+                overflowY: "auto",
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: 13,
+                  color:
+                    typeof content === "string" && content.trim() === ""
+                      ? "#94a3b8"
+                      : "#0f172a",
+                  fontStyle:
+                    typeof content === "string" && content.trim() === ""
+                      ? "italic"
+                      : "normal",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}
+              >
+                {typeof content === "string" && content.trim() === "" ? "empty" : content}
+              </Typography>
             </Box>
           </Box>
         )}
