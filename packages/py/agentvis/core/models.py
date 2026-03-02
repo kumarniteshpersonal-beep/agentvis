@@ -1,6 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel
 
+# models for tree structure
 class MessageType(str, Enum):
     AIMessage = "AIMessage"
     ToolMessage = "ToolMessage"
@@ -14,3 +15,10 @@ class Node(BaseModel):
 
 class Frame(BaseModel):
     nodes: list[Node]
+
+# models for LLM messages
+class LLMMessage(BaseModel):
+    id: str
+    type: MessageType
+    tool_name: str = ""
+    tool_args: dict = {}

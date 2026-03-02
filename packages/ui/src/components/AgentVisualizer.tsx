@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Dagre from "@dagrejs/dagre";
+import * as Dagre from "@dagrejs/dagre";
 import {
   ReactFlow,
   ReactFlowProvider,

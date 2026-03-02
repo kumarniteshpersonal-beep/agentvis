@@ -1,13 +1,41 @@
-import { Card, CardContent, Typography } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Stack } from "@mui/material";
 
 type MessageNodeProps = {
+  id?: string;
   type?: string;
   data?: {
+    tool_name?: string;
     tool_args?: Record<string, unknown>;
   };
 };
 
-function MessageNode({ type, data }: MessageNodeProps) {
+type ChipColor =
+  | "default"
+  | "primary"
+  | "secondary"
+  | "error"
+  | "info"
+  | "success"
+  | "warning";
+
+const TYPE_CONFIG: Record<
+  string,
+  {
+    icon: string;
+    color: ChipColor;
+  }
+> = {
+  ToolMessage: { icon: "🛠", color: "success" },
+  AIMessage: { icon: "🤖", color: "info" },
+  HumanMessage: { icon: "👤", color: "secondary" },
+  SystemMessage: { icon: "⚙️", color: "warning" },
+};
+
+function MessageNode({ id, type, data }: MessageNodeProps) {
+  const messageType = type ?? (data as any)?.messageType ?? "Message";
+  const config = TYPE_CONFIG[messageType] ?? { icon: "", color: "default" as ChipColor };
+
+  const toolName = data?.tool_name;
   const toolArgs = data?.tool_args;
   const hasArgs =
     toolArgs && typeof toolArgs === "object" && Object.keys(toolArgs).length > 0;
@@ -15,32 +43,104 @@ function MessageNode({ type, data }: MessageNodeProps) {
   return (
     <Card
       variant="outlined"
-      sx={{ minWidth: 160, bgcolor: "#020617", borderColor: "#1f2937" }}
+      sx={{
+        minWidth: 200,
+        bgcolor: "#ffffff",
+        borderColor: "#e5e7eb",
+        cursor: "pointer",
+      }}
       className="nodrag"
     >
       <CardContent sx={{ p: 1.5 }}>
-        {type && (
-          <Typography
-            variant="caption"
-            sx={{ color: "#e5e7eb", fontWeight: 600, display: "block" }}
-          >
-            {type}
-          </Typography>
-        )}
-        {hasArgs && (
-          <Typography
-            variant="body2"
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+          <Chip
+            size="small"
+            label={`${config.icon} ${messageType}`}
+            color={config.color}
+            variant="filled"
             sx={{
-              mt: 0.75,
-              whiteSpace: "pre-wrap",
-              fontSize: 12,
-              color: "#e5e7eb",
+              height: 22,
+              borderRadius: "999px",
+              fontSize: 10,
+              px: 0.75,
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
             }}
-          >
-            {Object.entries(toolArgs!)
-              .map(([k, v]) => `${k}: ${String(v)}`)
-              .join("\n")}
-          </Typography>
+          />
+          {id && (
+            <Typography variant="caption" sx={{ color: "#64748b", fontSize: 10 }}>
+              ID: {id.slice(0, 3)}
+            </Typography>
+          )}
+        </Stack>
+
+        {toolName && (
+          <Box mt={1.25}>
+            <Typography
+              variant="overline"
+              sx={{
+                fontSize: 9,
+                letterSpacing: 1.4,
+                color: "#64748b",
+                display: "block",
+              }}
+            >
+              FUNCTION
+            </Typography>
+            <Box
+              sx={{
+                mt: 0.25,
+                borderRadius: 1,
+                bgcolor: "#f1f5f9",
+                px: 1,
+                py: 0.75,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ fontSize: 13, color: "#0f172a", fontWeight: 500 }}
+              >
+                {toolName}
+              </Typography>
+            </Box>
+          </Box>
+        )}
+
+        {hasArgs && (
+          <Box mt={toolName ? 1.5 : 1}>
+            <Typography
+              variant="overline"
+              sx={{
+                fontSize: 9,
+                letterSpacing: 1.4,
+                color: "#64748b",
+                display: "block",
+              }}
+            >
+              PARAMETERS
+            </Typography>
+            <Box
+              sx={{
+                mt: 0.5,
+                borderRadius: 1,
+                bgcolor: "#f8fafc",
+                px: 1,
+                py: 0.5,
+              }}
+            >
+              {Object.entries(toolArgs!).map(([k, v]) => (
+                <Stack
+                  key={k}
+                  direction="row"
+                  justifyContent="space-between"
+                  sx={{ fontSize: 12, color: "#0f172a" }}
+                >
+                  <Typography sx={{ color: "#16a34a", fontSize: 12 }}>{k}</Typography>
+                  <Typography sx={{ fontSize: 12 }}>{String(v)}</Typography>
+                </Stack>
+              ))}
+            </Box>
+          </Box>
         )}
       </CardContent>
     </Card>
