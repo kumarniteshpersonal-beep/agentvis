@@ -71,16 +71,12 @@ function toFlowNodes(agentNodes: AgentNode[]): Node[] {
     id: n.id,
     type: n.type,
     position: { x: 0, y: i * 80 },
-    data: { ...n.data, messageType: n.type, id: n.id },
+    data: { ...n.data},
   }));
 }
 
-function toFlowEdges(agentNodes: AgentNode[]): Edge[] {
-  return agentNodes.slice(0, -1).map((n, i) => ({
-    id: `e-${n.id}-${agentNodes[i + 1].id}`,
-    source: n.id,
-    target: agentNodes[i + 1].id,
-  }));
+function toFlowEdges(_agentNodes: AgentNode[]): Edge[] {
+  return [];
 }
 
 function getCumulativeNodes(frameList: Frame[], upToIndex: number): AgentNode[] {
@@ -100,7 +96,7 @@ function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
   const cumulativeNodes = getCumulativeNodes(frameList, clampedIndex);
 
   const initialNodes = cumulativeNodes.length ? toFlowNodes(cumulativeNodes) : [];
-  const initialEdges = cumulativeNodes.length ? toFlowEdges(cumulativeNodes) : [];
+  const initialEdges = cumulativeNodes.length ? toFlowEdges([]) : []; // TODO: Add edges
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -118,7 +114,7 @@ function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
   useEffect(() => {
     if (!cumulativeNodes.length) return;
     const flowNodes = toFlowNodes(cumulativeNodes);
-    const flowEdges = toFlowEdges(cumulativeNodes);
+    const flowEdges = toFlowEdges([]); // TODO: Add edges
     const layouted = getLayoutedElements(flowNodes, flowEdges, "TB");
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
