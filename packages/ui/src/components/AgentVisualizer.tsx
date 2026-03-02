@@ -34,8 +34,8 @@ export interface AgentVisualizerProps {
   frames: Frame | Frame[];
 }
 
-const DEFAULT_NODE_WIDTH = 180;
-const DEFAULT_NODE_HEIGHT = 40;
+const DEFAULT_NODE_WIDTH = 320;
+const DEFAULT_NODE_HEIGHT = 260;
 
 function getLayoutedElements(
   nodes: Node[],
@@ -43,7 +43,7 @@ function getLayoutedElements(
   direction: "TB" | "LR" = "TB"
 ) {
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: direction });
+  g.setGraph({ rankdir: direction, ranksep: 64, nodesep: 32 });
 
   edges.forEach((edge) => g.setEdge(edge.source, edge.target));
   nodes.forEach((node) =>
@@ -70,7 +70,7 @@ function toFlowNodes(agentNodes: AgentNode[]): Node[] {
   return agentNodes.map((n, i) => ({
     id: n.id,
     type: n.type,
-    position: { x: 0, y: i * 80 },
+    position: { x: 0, y: i * (DEFAULT_NODE_HEIGHT + 32) },
     data: { ...n.data},
   }));
 }

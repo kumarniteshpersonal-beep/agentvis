@@ -1,4 +1,11 @@
-import { Card, CardContent, Typography, Chip, Box, Stack } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Stack, SvgIconTypeMap, SvgIconPropsColorOverrides } from "@mui/material";
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import ConstructionIcon from '@mui/icons-material/Construction';
+import Face6Icon from '@mui/icons-material/Face6';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { OverridableComponent } from "@mui/material/OverridableComponent";
+import { OverridableStringUnion } from "@mui/types";
+import { ChipPropsColorOverrides } from "@mui/material/Chip";
 
 type MessageNodeProps = {
   id?: string;
@@ -22,14 +29,15 @@ type ChipColor =
 const TYPE_CONFIG: Record<
   string,
   {
-    icon: string;
-    color: ChipColor;
+    icon: OverridableComponent<SvgIconTypeMap<{}, "svg">> & { muiName: string };
+    color: ChipColor | OverridableStringUnion<"primary" | "secondary" | "error" | "info" | "success" | "warning", ChipPropsColorOverrides>;
+    iconColor: OverridableStringUnion<"primary" | "secondary" | "error" | "info" | "success" | "warning" | "inherit" | "disabled" | "action", SvgIconPropsColorOverrides>;
   }
 > = {
-  ToolMessage: { icon: "🛠", color: "success" },
-  AIMessage: { icon: "🤖", color: "info" },
-  HumanMessage: { icon: "👤", color: "secondary" },
-  SystemMessage: { icon: "⚙️", color: "warning" },
+  ToolMessage: { icon: ConstructionIcon, color: "success", iconColor: "success" },
+  AIMessage: { icon: SmartToyIcon, color: "info", iconColor: "info" },
+  HumanMessage: { icon: Face6Icon, color: "secondary", iconColor: "secondary" },
+  SystemMessage: { icon: SettingsIcon, color: "warning", iconColor: "warning" },
 };
 
 function MessageNode({ id, type, data }: MessageNodeProps) {
@@ -47,6 +55,8 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
       variant="outlined"
       sx={{
         minWidth: 200,
+        width: 320,
+        maxWidth: 320,
         bgcolor: "#ffffff",
         borderColor: "#e5e7eb",
         cursor: "pointer",
@@ -55,11 +65,12 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
     >
       <CardContent sx={{ p: 1.5 }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+          <config.icon color={config.iconColor} />
           <Chip
             size="small"
-            label={`${config.icon} ${messageType}`}
+            label={messageType}
             color={config.color}
-            variant="filled"
+            variant="outlined"
             sx={{
               height: 22,
               borderRadius: "999px",
@@ -181,6 +192,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                       ? "italic"
                       : "normal",
                   whiteSpace: "pre-wrap",
+                  overflowWrap: "anywhere",
                   wordBreak: "break-word",
                 }}
               >
