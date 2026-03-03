@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { AgentVisualizer, type AgentGraph } from "../index";
+import * as pako from "pako";
 
 const root = document.getElementById("root");
 
@@ -88,17 +89,29 @@ const fallbackGraph: AgentGraph = {
 
 function getParsedJsonFromQuery(): AgentGraph | undefined {
   if (typeof window === "undefined") return undefined;
+
   try {
     const params = new URLSearchParams(window.location.search);
     const raw = params.get("view");
     if (!raw) return undefined;
-    const decoded = decodeURIComponent(raw);
-    const parsed = JSON.parse(decoded);
-    return parsed as AgentGraph;
-  } catch {
-    // ignore and fall back
+
+    const base64 = raw
+      .replace(/-/g, "+")
+      .replace(/_/g, "/")
+      .padEnd(raw.length + (4 - (raw.length % 4)) % 4, "=");
+
+    const binaryString = atob(base64);
+    const compressed = Uint8Array.from(binaryString, (c) =>
+      c.charCodeAt(0)
+    );
+
+    const decompressed = pako.inflate(compressed, { to: "string" });
+
+    return JSON.parse(decompressed) as AgentGraph;
+  } catch (error) {
+    console.error("Error parsing compressed JSON", error);
+    return undefined;
   }
-  return undefined;
 }
 
 const parsedJson = getParsedJsonFromQuery() ?? fallbackGraph;

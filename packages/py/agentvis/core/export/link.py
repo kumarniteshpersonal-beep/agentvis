@@ -1,17 +1,25 @@
 from agentvis.core.export.base import ExportStrategy
 from agentvis.core.models import AgentGraph
 import json
-from urllib.parse import quote
+import zlib
+import base64
 
 class LinkExportStrategy(ExportStrategy):
     def __init__(self, graph: AgentGraph):
         super().__init__(graph)
+        self.BASE_URL = "http://localhost:5173"
 
     def export(self) -> str:
-        _json = json.dumps(
-            {"frames": [frame.model_dump() for frame in self.graph.frames], "connections": [connection.model_dump() for connection in self.graph.connections]},
-            separators=(",", ":")
-        )
+        data = {
+            "frames": [frame.model_dump() for frame in self.graph.frames],
+            "connections": [
+                connection.model_dump()
+                for connection in self.graph.connections
+            ],
+        }
 
-        encoded_json = quote(_json, safe="")
-        return f"http://localhost:5173?view={encoded_json}"
+        json_string = json.dumps(data, separators=(",", ":"))
+        compressed = zlib.compress(json_string.encode("utf-8"))
+        encoded = base64.urlsafe_b64encode(compressed).decode("utf-8")
+
+        return f"{self.BASE_URL}?view={encoded}"
