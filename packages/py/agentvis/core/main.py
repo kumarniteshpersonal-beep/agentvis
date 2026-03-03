@@ -1,4 +1,5 @@
-from agentvis.core.models import LLMMessage, Frame, Node, MessageType
+from agentvis.core.models import LLMMessage, Frame, Node, MessageType, Connection
+from agentvis.core.connection_creation_strategy import ContextConnectionCreation, StrategyToolToTool
 
 class BusinessLogic:
     @staticmethod
@@ -36,3 +37,15 @@ class BusinessLogic:
                         function_to_args_map[tool_call.name] = tool_call.args
 
         return frames
+    
+    @staticmethod
+    def create_connections(frames: list[Frame]) -> list[Connection]:
+        nodes_matrix = []
+
+        for frame in frames:
+            nodes_matrix.append(frame.nodes)
+
+        context_connection_creation = ContextConnectionCreation()
+        context_connection_creation.set_strategy(StrategyToolToTool(nodes_matrix))
+        context_connection_creation.create_connections()
+        return context_connection_creation.get_connections()

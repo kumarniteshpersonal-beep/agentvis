@@ -6,6 +6,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import { OverridableComponent } from "@mui/material/OverridableComponent";
 import { OverridableStringUnion } from "@mui/types";
 import { ChipPropsColorOverrides } from "@mui/material/Chip";
+import { Handle, Position } from "@xyflow/react";
 
 type MessageNodeProps = {
   id?: string;
@@ -60,6 +61,8 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         bgcolor: "#ffffff",
         borderColor: "#e5e7eb",
         cursor: "pointer",
+        position: "relative",
+        overflow: "visible",
       }}
       className="nodrag"
     >
@@ -202,6 +205,16 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
           </Box>
         )}
       </CardContent>
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ top: "50%", transform: "translateY(-50%)", left: -8 }}
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ top: "50%", transform: "translateY(-50%)", right: -8 }}
+      />
     </Card>
   );
 }

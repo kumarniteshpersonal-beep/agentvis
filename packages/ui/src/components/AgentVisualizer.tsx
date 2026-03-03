@@ -10,6 +10,7 @@ import {
   type Edge,
   Background,
   MiniMap,
+  MarkerType,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import MessageNode from "./nodes/MessageNode";
@@ -30,8 +31,18 @@ export interface Frame {
   nodes: AgentNode[];
 }
 
+export interface Connection {
+  id: string;
+  source: string;
+  target: string;
+}
+
+export interface AgentGraph {
+  frames: Frame[];
+  connections: Connection[];
+}
 export interface AgentVisualizerProps {
-  frames: Frame | Frame[];
+  graph: AgentGraph;
 }
 
 const DEFAULT_NODE_WIDTH = 320;
@@ -65,11 +76,22 @@ function toFlowNodesByFrame(frameList: Frame[], upToIndex: number): Node[] {
   return nodes;
 }
 
-function toFlowEdges(_agentNodes: AgentNode[]): Edge[] {
-  return [];
+function toFlowEdges(connections: Connection[]): Edge[] {
+  return connections.map((connection) => ({
+    id: connection.id,
+    source: connection.source,
+    target: connection.target,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 20,
+      height: 20,
+    },
+  }));
 }
 
-function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
+function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
+  const frames = graph.frames;
+  const connections = graph.connections;
   const frameList = Array.isArray(frames) ? frames : [frames];
   const [frameIndex, setFrameIndex] = useState(0);
 
@@ -80,10 +102,10 @@ function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
     .reduce((acc, f) => acc + f.nodes.length, 0);
 
   const initialNodes = totalNodesUpToFrame ? toFlowNodesByFrame(frameList, clampedIndex) : [];
-  const initialEdges = totalNodesUpToFrame ? toFlowEdges([]) : []; // TODO: Add edges
+  const initialEdges = toFlowEdges(connections);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, _, onEdgesChange] = useEdgesState(initialEdges);
   const { fitView } = useReactFlow();
 
   const onPrev = () => {
@@ -98,9 +120,7 @@ function AgentVisualizerInner({ frames }: AgentVisualizerProps) {
   useEffect(() => {
     if (totalNodesUpToFrame === 0) return;
     const flowNodes = toFlowNodesByFrame(frameList, clampedIndex);
-    const flowEdges = toFlowEdges([]); // TODO: Add edges
     setNodes(flowNodes);
-    setEdges(flowEdges);
     requestAnimationFrame(() => fitView());
   }, [clampedIndex, fitView, frames]);
 

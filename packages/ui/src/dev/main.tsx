@@ -1,9 +1,10 @@
 import { createRoot } from "react-dom/client";
-import { AgentVisualizer, type Frame } from "../index";
+import { AgentVisualizer, type AgentGraph } from "../index";
 
 const root = document.getElementById("root");
 
-const fallbackFrames: Frame[] = [
+const fallbackGraph: AgentGraph = {
+  frames: [
   {
     nodes: [
       {
@@ -75,9 +76,17 @@ const fallbackFrames: Frame[] = [
       },
     ],
   },
-];
+],
+  connections: [
+    {
+      id: "d4483108-4189-45f2-8ca8-2ad0c5d0ad8b--04878524-b55d-4435-97fa-2d570ee147ec",
+      source: "d4483108-4189-45f2-8ca8-2ad0c5d0ad8b",
+      target: "04878524-b55d-4435-97fa-2d570ee147ec",
+    }
+  ],
+};
 
-function getFramesFromQuery(): Frame[] | undefined {
+function getParsedJsonFromQuery(): AgentGraph | undefined {
   if (typeof window === "undefined") return undefined;
   try {
     const params = new URLSearchParams(window.location.search);
@@ -85,21 +94,15 @@ function getFramesFromQuery(): Frame[] | undefined {
     if (!raw) return undefined;
     const decoded = decodeURIComponent(raw);
     const parsed = JSON.parse(decoded);
-
-    if (Array.isArray(parsed)) {
-      return parsed as Frame[];
-    }
-    if (parsed && Array.isArray((parsed as any).frames)) {
-      return (parsed as any).frames as Frame[];
-    }
+    return parsed as AgentGraph;
   } catch {
     // ignore and fall back
   }
   return undefined;
 }
 
-const frames = getFramesFromQuery() ?? fallbackFrames;
+const parsedJson = getParsedJsonFromQuery() ?? fallbackGraph;
 
 if (root) {
-  createRoot(root).render(<AgentVisualizer frames={frames} />);
+  createRoot(root).render(<AgentVisualizer graph={parsedJson} />);
 }

@@ -1,5 +1,5 @@
 from agentvis.framework.base import AIFrameWork
-from agentvis.core.models import LLMMessage, Frame, ToolCall
+from agentvis.core.models import LLMMessage, Frame, ToolCall, AgentGraph
 from agentvis.core import BusinessLogic
 from langchain.messages import ToolMessage, AIMessage, HumanMessage, SystemMessage
 
@@ -7,7 +7,7 @@ class LangChainFrameWork(AIFrameWork):
     def __init__(self):
         super().__init__()
 
-    def build_frames(self, messages: list[ToolMessage | AIMessage | HumanMessage | SystemMessage]) -> list[Frame]:
+    def build_agent_graph(self, messages: list[ToolMessage | AIMessage | HumanMessage | SystemMessage]) -> AgentGraph:
         _messages: list[LLMMessage] = []
 
         # convert messages to LLMMessage
@@ -28,4 +28,6 @@ class LangChainFrameWork(AIFrameWork):
                 tool_name=tool_name
             ))
 
-        return BusinessLogic.build_frames(_messages)
+        frames = BusinessLogic.build_frames(_messages)
+        connections = BusinessLogic.create_connections(frames)
+        return AgentGraph(frames=frames, connections=connections)

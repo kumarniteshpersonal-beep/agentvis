@@ -13,8 +13,17 @@ class Node(BaseModel):
     type: MessageType
     data: dict = {}
 
+class Connection(BaseModel):
+    id: str
+    source: str
+    target: str
+
 class Frame(BaseModel):
     nodes: list[Node]
+
+class AgentGraph(BaseModel):
+    frames: list[Frame]
+    connections: list[Connection]
 
 # models for LLM messages
 class ToolCall(BaseModel):
