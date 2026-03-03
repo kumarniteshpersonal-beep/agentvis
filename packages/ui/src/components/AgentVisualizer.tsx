@@ -121,6 +121,7 @@ function toFlowEdges(connections: Connection[]): Edge[] {
       width: 20,
       height: 20,
     },
+    type: 'bezier'
   }));
 }
 
