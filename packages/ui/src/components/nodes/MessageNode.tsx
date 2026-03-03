@@ -51,6 +51,9 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
   const hasArgs =
     toolArgs && typeof toolArgs === "object" && Object.keys(toolArgs).length > 0;
 
+  const hasSourceHandle = Boolean((data as any)?.hasSourceHandle);
+  const hasTargetHandle = Boolean((data as any)?.hasTargetHandle);
+
   return (
     <Card
       variant="outlined"
@@ -205,16 +208,20 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
           </Box>
         )}
       </CardContent>
-      <Handle
-        type="target"
-        position={Position.Left}
-        style={{ top: "50%", transform: "translateY(-50%)", left: -8 }}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ top: "50%", transform: "translateY(-50%)", right: -8 }}
-      />
+      {hasTargetHandle && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ top: "50%", transform: "translateY(-50%)", left: -8 }}
+        />
+      )}
+      {hasSourceHandle && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ top: "50%", transform: "translateY(-50%)", right: -8 }}
+        />
+      )}
     </Card>
   );
 }

@@ -50,7 +50,36 @@ const DEFAULT_NODE_HEIGHT = 260;
 const FRAME_X_GAP = 80;
 const NODE_Y_GAP = 32;
 
-function toFlowNodesByFrame(frameList: Frame[], upToIndex: number): Node[] {
+type ConnectionInfo = {
+  hasSource: boolean;
+  hasTarget: boolean;
+};
+
+type ConnectionMap = Record<string, ConnectionInfo>;
+
+function buildConnectionMap(connections: Connection[]): ConnectionMap {
+  const map: ConnectionMap = {};
+
+  for (const c of connections) {
+    if (!map[c.source]) {
+      map[c.source] = { hasSource: false, hasTarget: false };
+    }
+    if (!map[c.target]) {
+      map[c.target] = { hasSource: false, hasTarget: false };
+    }
+
+    map[c.source].hasSource = true;
+    map[c.target].hasTarget = true;
+  }
+
+  return map;
+}
+
+function toFlowNodesByFrame(
+  frameList: Frame[],
+  upToIndex: number,
+  connectionMap: ConnectionMap,
+): Node[] {
   const nodes: Node[] = [];
   const maxIndex = Math.min(upToIndex, frameList.length - 1);
 
@@ -62,13 +91,19 @@ function toFlowNodesByFrame(frameList: Frame[], upToIndex: number): Node[] {
       const n = frame.nodes[nodeIdx];
       const y = nodeIdx * (DEFAULT_NODE_HEIGHT + NODE_Y_GAP);
 
+      const info = connectionMap[n.id];
+
       nodes.push({
         id: n.id,
         type: n.type,
         width: DEFAULT_NODE_WIDTH,
         height: DEFAULT_NODE_HEIGHT,
         position: { x, y },
-        data: { ...n.data },
+        data: {
+          ...n.data,
+          hasSourceHandle: !!info?.hasSource,
+          hasTargetHandle: !!info?.hasTarget,
+        },
       });
     }
   }
@@ -101,7 +136,11 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     .slice(0, clampedIndex + 1)
     .reduce((acc, f) => acc + f.nodes.length, 0);
 
-  const initialNodes = totalNodesUpToFrame ? toFlowNodesByFrame(frameList, clampedIndex) : [];
+  const connectionMap = buildConnectionMap(connections);
+
+  const initialNodes = totalNodesUpToFrame
+    ? toFlowNodesByFrame(frameList, clampedIndex, connectionMap)
+    : [];
   const initialEdges = toFlowEdges(connections);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -119,10 +158,10 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
 
   useEffect(() => {
     if (totalNodesUpToFrame === 0) return;
-    const flowNodes = toFlowNodesByFrame(frameList, clampedIndex);
+    const flowNodes = toFlowNodesByFrame(frameList, clampedIndex, connectionMap);
     setNodes(flowNodes);
     requestAnimationFrame(() => fitView());
-  }, [clampedIndex, fitView, frames]);
+  }, [clampedIndex, fitView, frames, connections]);
 
   return (
     <div style={{ width: "100%", height: "100vh" }}>
