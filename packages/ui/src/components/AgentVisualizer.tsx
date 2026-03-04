@@ -160,6 +160,7 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
   const [edges] = useEdgesState(initialEdges);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<Edge | null>(null);
+  const [hoveredTargetNodeId, setHoveredTargetNodeId] = useState<string | null>(null);
   const [popperPosition, setPopperPosition] = useState<{ x: number; y: number } | null>(null);
   const { fitView } = useReactFlow();
 
@@ -201,6 +202,20 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     [],
   );
 
+  const onNodeMouseEnter = useCallback(
+    (_: MouseEvent, node: Node) => {
+      setHoveredTargetNodeId(node.id);
+    },
+    [],
+  );
+
+  const onNodeMouseLeave = useCallback(
+    (_: MouseEvent, _node: Node) => {
+      setHoveredTargetNodeId(null);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (totalNodesUpToFrame === 0) return;
     const flowNodes = toFlowNodesByFrame(frameList, clampedIndex, connectionMap);
@@ -219,7 +234,9 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
             (e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target),
           )
           .map((e) => {
-            const isHovered = hoveredEdgeId === e.id;
+            const isHovered =
+              hoveredEdgeId === e.id ||
+              (hoveredTargetNodeId !== null && e.target === hoveredTargetNodeId);
             return {
               ...e,
               style: {
@@ -237,6 +254,8 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
           })}
         onNodesChange={onNodesChange}
         onEdgesChange={() => {}}
+        onNodeMouseEnter={onNodeMouseEnter}
+        onNodeMouseLeave={onNodeMouseLeave}
         onEdgeMouseEnter={onEdgeMouseEnter}
         onEdgeMouseLeave={onEdgeMouseLeave}
         nodesDraggable={false}

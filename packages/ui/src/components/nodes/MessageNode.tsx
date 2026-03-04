@@ -70,6 +70,14 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         boxShadow: isHighlighted
           ? "0 0 0 1px rgba(224, 83, 31, 0.35), 0 18px 45px rgba(15, 23, 42, 0.35)"
           : "0 6px 18px rgba(15, 23, 42, 0.06)",
+        transition:
+          "box-shadow 150ms ease, border-color 150ms ease, transform 150ms ease",
+        "&:hover": {
+          borderColor: "#E0531F",
+          boxShadow:
+            "0 0 0 1px rgba(224, 83, 31, 0.45), 0 22px 55px rgba(15, 23, 42, 0.4)",
+          transform: "translateY(-2px)",
+        },
       }}
       className="nodrag"
     >

@@ -37,15 +37,15 @@ export function ReasoningDetails({ edge, position }: ReasoningDetailsProps) {
 
     const confidencePercent = Math.round(confidence_score * 100);
 
-    let progressColor: "inherit" | "success" | "warning" | "error" = "inherit";
-    let barColorHex = "#9ca3af";
+    let progressColor: "info" | "success" | "warning" | "error" = "info";
+    let barColorHex = "#3b82f6";
 
     if (confidencePercent >= 40) {
         progressColor = "success";
         barColorHex = "#10b981";
     } else if (confidencePercent >= 20) {
-        progressColor = "warning";
-        barColorHex = "#f59e0b";
+        progressColor = "info";
+        barColorHex = "#3b82f6";
     } else {
         progressColor = "error";
         barColorHex = "#ef4444";
