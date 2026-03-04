@@ -1,1 +1,1 @@
-from .main import LangChainFrameWork
+from .main import LangChainAdapter

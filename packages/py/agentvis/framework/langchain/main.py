@@ -3,7 +3,7 @@ from agentvis.core.models import LLMMessage, Frame, ToolCall, AgentGraph
 from agentvis.core import BusinessLogic
 from langchain.messages import ToolMessage, AIMessage, HumanMessage, SystemMessage
 
-class LangChainFrameWork(AIFrameWork):
+class LangChainAdapter(AIFrameWork):
     def __init__(self):
         super().__init__()
 
