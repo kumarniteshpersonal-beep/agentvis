@@ -15,6 +15,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import MessageNode from "./nodes/MessageNode";
 import ReasoningDetails from "./ReasoningDetails";
+import ConnectionEdge from "./ConnectionEdge";
+import ArrowRightIcon from '@mui/icons-material/ArrowRight';
+import ArrowLeftIcon from '@mui/icons-material/ArrowLeft';
 
 export type MessageType =
   | "AIMessage"
@@ -122,6 +125,7 @@ function toFlowEdges(connections: Connection[]): Edge[] {
     source: connection.source,
     target: connection.target,
     data: connection.data,
+    type: "connection",
     markerEnd: {
       type: MarkerType.ArrowClosed,
       width: 20,
@@ -193,6 +197,26 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     [],
   );
 
+  const onEdgeClick = useCallback(
+    (event: MouseEvent, edge: Edge) => {
+      const target = event.currentTarget as HTMLElement | null;
+      const rect = target?.getBoundingClientRect();
+
+      if (rect) {
+        setPopperPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.bottom + 8,
+        });
+      } else {
+        setPopperPosition(null);
+      }
+
+      setHoveredEdgeId(edge.id);
+      setHoveredEdge(edge);
+    },
+    [],
+  );
+
   const onEdgeMouseLeave = useCallback(
     (_: MouseEvent, _edge: Edge) => {
       setHoveredEdgeId(null);
@@ -237,7 +261,7 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
             const isHovered =
               hoveredEdgeId === e.id ||
               (hoveredTargetNodeId !== null && e.target === hoveredTargetNodeId);
-            return {
+            const styledEdge: Edge = {
               ...e,
               style: {
                 ...(e.style || {}),
@@ -251,6 +275,23 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
                   }
                 : undefined,
             };
+
+            return {
+              ...styledEdge,
+              data: {
+                ...(styledEdge.data || {}),
+                onButtonClick: (targetEl: HTMLElement) => {
+                  const rect = targetEl.getBoundingClientRect();
+
+                  setPopperPosition({
+                    x: rect.left + rect.width / 2,
+                    y: rect.bottom + 8,
+                  });
+                  setHoveredEdgeId(e.id);
+                  setHoveredEdge(e);
+                },
+              },
+            };
           })}
         onNodesChange={onNodesChange}
         onEdgesChange={() => {}}
@@ -258,10 +299,12 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
         onNodeMouseLeave={onNodeMouseLeave}
         onEdgeMouseEnter={onEdgeMouseEnter}
         onEdgeMouseLeave={onEdgeMouseLeave}
+        onEdgeClick={onEdgeClick}
         nodesDraggable={false}
         fitView
         proOptions={{ hideAttribution: true }}
         nodeTypes={{ HumanMessage: MessageNode, AIMessage: MessageNode, ToolMessage: MessageNode, SystemMessage: MessageNode }}
+        edgeTypes={{ connection: ConnectionEdge }}
       >
         <Background />
         <Panel position="bottom-left">
@@ -277,10 +320,11 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
                 borderRadius: 4,
                 background: "#fff",
                 cursor: "pointer",
+                color: "#e0531f",
                 fontSize: 14,
               }}
             >
-              ‹
+              <ArrowLeftIcon />
             </button>
             <button
               onClick={onNext}
@@ -293,10 +337,11 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
                 borderRadius: 4,
                 background: "#fff",
                 cursor: "pointer",
+                color: "#e0531f",
                 fontSize: 14,
               }}
             >
-              ›
+              <ArrowRightIcon />
             </button>
           </div>
         </Panel>
