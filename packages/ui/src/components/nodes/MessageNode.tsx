@@ -53,6 +53,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
 
   const hasSourceHandle = Boolean((data as any)?.hasSourceHandle);
   const hasTargetHandle = Boolean((data as any)?.hasTargetHandle);
+  const isHighlighted = Boolean((data as any)?.isHighlighted);
 
   return (
     <Card
@@ -62,10 +63,13 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         width: 320,
         maxWidth: 320,
         bgcolor: "#ffffff",
-        borderColor: "#e5e7eb",
+        borderColor: isHighlighted ? "#E0531F" : "#e5e7eb",
         cursor: "pointer",
         position: "relative",
         overflow: "visible",
+        boxShadow: isHighlighted
+          ? "0 0 0 1px rgba(224, 83, 31, 0.35), 0 18px 45px rgba(15, 23, 42, 0.35)"
+          : "0 6px 18px rgba(15, 23, 42, 0.06)",
       }}
       className="nodrag"
     >
@@ -88,7 +92,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
           />
           {id && (
             <Typography variant="caption" sx={{ color: "#64748b", fontSize: 10 }}>
-              ID: {id.slice(0, 3)}
+              ID: {id.substr(id.length - 5)}
             </Typography>
           )}
         </Stack>

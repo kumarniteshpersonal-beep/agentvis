@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -14,6 +14,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import MessageNode from "./nodes/MessageNode";
+import ReasoningDetails from "./ReasoningDetails";
 
 export type MessageType =
   | "AIMessage"
@@ -35,6 +36,7 @@ export interface Connection {
   id: string;
   source: string;
   target: string;
+  data: any
 }
 
 export interface AgentGraph {
@@ -119,6 +121,7 @@ function toFlowEdges(connections: Connection[]): Edge[] {
     id: connection.id,
     source: connection.source,
     target: connection.target,
+    data: connection.data,
     markerEnd: {
       type: MarkerType.ArrowClosed,
       width: 20,
@@ -132,6 +135,7 @@ function toFlowEdges(connections: Connection[]): Edge[] {
     },
   }));
 }
+
 
 function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
   const frames = graph.frames;
@@ -153,7 +157,10 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
   const initialEdges = toFlowEdges(connections);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [edges] = useEdgesState(initialEdges);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<Edge | null>(null);
+  const [popperPosition, setPopperPosition] = useState<{ x: number; y: number } | null>(null);
   const { fitView } = useReactFlow();
 
   const onPrev = () => {
@@ -165,44 +172,33 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     setFrameIndex((idx) => Math.min(frameList.length - 1, idx + 1));
   };
 
-  const handleEdgeHover = useCallback(
-    (edgeId: string, hover: boolean) => {
-      setEdges((eds) =>
-        eds.map((e) =>
-          e.id === edgeId
-            ? {
-                ...e,
-                style: {
-                  ...e.style,
-                  stroke: hover ? EDGE_HOVER_COLOR : EDGE_COLOR,
-                  cursor: "pointer",
-                },
-                markerEnd: e.markerEnd
-                  ? {
-                      ...(e.markerEnd as any),
-                      color: hover ? EDGE_HOVER_COLOR : EDGE_COLOR,
-                    }
-                  : undefined,
-              }
-            : e,
-        ),
-      );
+  const onEdgeMouseEnter = useCallback(
+    (event: MouseEvent, edge: Edge) => {
+      const target = event.currentTarget as HTMLElement | null;
+      const rect = target?.getBoundingClientRect();
+
+      if (rect) {
+        setPopperPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.bottom + 8,
+        });
+      } else {
+        setPopperPosition(null);
+      }
+
+      setHoveredEdgeId(edge.id);
+      setHoveredEdge(edge);
     },
     [],
   );
 
-  const onEdgeMouseEnter = useCallback(
-    (_: React.MouseEvent, edge: Edge) => {
-      handleEdgeHover(edge.id, true);
-    },
-    [handleEdgeHover],
-  );
-
   const onEdgeMouseLeave = useCallback(
-    (_: React.MouseEvent, edge: Edge) => {
-      handleEdgeHover(edge.id, false);
+    (_: MouseEvent, _edge: Edge) => {
+      setHoveredEdgeId(null);
+      setHoveredEdge(null);
+      setPopperPosition(null);
     },
-    [handleEdgeHover],
+    [],
   );
 
   useEffect(() => {
@@ -212,13 +208,35 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     requestAnimationFrame(() => fitView());
   }, [clampedIndex, fitView, frames, connections]);
 
+  const visibleNodeIds = new Set(nodes.map((n) => n.id));
+
   return (
     <div style={{ width: "100%", height: "100vh" }}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={edges
+          .filter(
+            (e) => visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target),
+          )
+          .map((e) => {
+            const isHovered = hoveredEdgeId === e.id;
+            return {
+              ...e,
+              style: {
+                ...(e.style || {}),
+                stroke: isHovered ? EDGE_HOVER_COLOR : EDGE_COLOR,
+                cursor: "pointer",
+              },
+              markerEnd: e.markerEnd
+                ? {
+                    ...(e.markerEnd as any),
+                    color: isHovered ? EDGE_HOVER_COLOR : EDGE_COLOR,
+                  }
+                : undefined,
+            };
+          })}
         onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onEdgesChange={() => {}}
         onEdgeMouseEnter={onEdgeMouseEnter}
         onEdgeMouseLeave={onEdgeMouseLeave}
         nodesDraggable={false}
@@ -264,6 +282,9 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
           </div>
         </Panel>
         <MiniMap />
+        {hoveredEdge && popperPosition && (
+          <ReasoningDetails edge={hoveredEdge} position={popperPosition} />
+        )}
       </ReactFlow>
     </div>
   );
