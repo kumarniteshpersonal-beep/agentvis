@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -49,6 +49,9 @@ const DEFAULT_NODE_WIDTH = 320;
 const DEFAULT_NODE_HEIGHT = 260;
 const FRAME_X_GAP = 80;
 const NODE_Y_GAP = 32;
+
+const EDGE_COLOR = "#CBD5E1";
+const EDGE_HOVER_COLOR = "#E0531F";
 
 type ConnectionInfo = {
   hasSource: boolean;
@@ -120,8 +123,13 @@ function toFlowEdges(connections: Connection[]): Edge[] {
       type: MarkerType.ArrowClosed,
       width: 20,
       height: 20,
+      color: EDGE_COLOR,
     },
-    type: 'bezier'
+    style: {
+      strokeWidth: 2,
+      stroke: EDGE_COLOR,
+      cursor: "pointer",
+    },
   }));
 }
 
@@ -145,7 +153,7 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
   const initialEdges = toFlowEdges(connections);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, _, onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const { fitView } = useReactFlow();
 
   const onPrev = () => {
@@ -156,6 +164,46 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     if (frameList.length === 0) return;
     setFrameIndex((idx) => Math.min(frameList.length - 1, idx + 1));
   };
+
+  const handleEdgeHover = useCallback(
+    (edgeId: string, hover: boolean) => {
+      setEdges((eds) =>
+        eds.map((e) =>
+          e.id === edgeId
+            ? {
+                ...e,
+                style: {
+                  ...e.style,
+                  stroke: hover ? EDGE_HOVER_COLOR : EDGE_COLOR,
+                  cursor: "pointer",
+                },
+                markerEnd: e.markerEnd
+                  ? {
+                      ...(e.markerEnd as any),
+                      color: hover ? EDGE_HOVER_COLOR : EDGE_COLOR,
+                    }
+                  : undefined,
+              }
+            : e,
+        ),
+      );
+    },
+    [],
+  );
+
+  const onEdgeMouseEnter = useCallback(
+    (_: React.MouseEvent, edge: Edge) => {
+      handleEdgeHover(edge.id, true);
+    },
+    [handleEdgeHover],
+  );
+
+  const onEdgeMouseLeave = useCallback(
+    (_: React.MouseEvent, edge: Edge) => {
+      handleEdgeHover(edge.id, false);
+    },
+    [handleEdgeHover],
+  );
 
   useEffect(() => {
     if (totalNodesUpToFrame === 0) return;
@@ -171,6 +219,9 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onEdgeMouseEnter={onEdgeMouseEnter}
+        onEdgeMouseLeave={onEdgeMouseLeave}
+        nodesDraggable={false}
         fitView
         proOptions={{ hideAttribution: true }}
         nodeTypes={{ HumanMessage: MessageNode, AIMessage: MessageNode, ToolMessage: MessageNode, SystemMessage: MessageNode }}
