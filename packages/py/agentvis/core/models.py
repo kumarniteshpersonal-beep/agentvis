@@ -44,6 +44,7 @@ class AgentGraph(BaseModel):
 class ToolCall(BaseModel):
     name: str
     args: dict
+    tool_call_id: str
 
 class LLMMessage(BaseModel):
     id: str
@@ -51,3 +52,4 @@ class LLMMessage(BaseModel):
     content: str = ""
     tool_calls: list[ToolCall] = []
     tool_name: str = ""
+    tool_call_id: str = ""

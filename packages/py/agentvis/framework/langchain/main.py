@@ -14,18 +14,21 @@ class LangChainAdapter(AIFrameWork):
         for message in messages:
             tool_calls = []
             tool_name = ""
+            tool_call_id = ""
 
             if isinstance(message, AIMessage):
-                tool_calls = [ToolCall(name=tool_call["name"], args=tool_call["args"]) for tool_call in message.tool_calls]
+                tool_calls = [ToolCall(name=tool_call["name"], args=tool_call["args"], tool_call_id=tool_call["id"]) for tool_call in message.tool_calls]
             if isinstance(message, ToolMessage):
                 tool_name = message.name
-
+                tool_call_id = message.tool_call_id
+                
             _messages.append(LLMMessage(
                 id=message.id,
                 type=message.__class__.__name__,
                 content=message.content,
                 tool_calls=tool_calls,
-                tool_name=tool_name
+                tool_name=tool_name,
+                tool_call_id=tool_call_id
             ))
 
         frames = BusinessLogic.build_frames(_messages)
