@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -52,6 +52,7 @@ export interface AgentVisualizerProps {
 
 const DEFAULT_NODE_WIDTH = 320;
 const DEFAULT_NODE_HEIGHT = 260;
+const TOOL_NODE_HEIGHT = 380;
 const FRAME_X_GAP = 80;
 const NODE_Y_GAP = 32;
 
@@ -94,10 +95,16 @@ function toFlowNodesByFrame(
   for (let frameIdx = 0; frameIdx <= maxIndex; frameIdx++) {
     const frame = frameList[frameIdx];
     const x = frameIdx * (DEFAULT_NODE_WIDTH + FRAME_X_GAP);
+    let currentY = 0;
 
     for (let nodeIdx = 0; nodeIdx < frame.nodes.length; nodeIdx++) {
       const n = frame.nodes[nodeIdx];
-      const y = nodeIdx * (DEFAULT_NODE_HEIGHT + NODE_Y_GAP);
+      const baseHeight =
+        (n.type as MessageType) === "ToolMessage"
+          ? TOOL_NODE_HEIGHT
+          : DEFAULT_NODE_HEIGHT;
+      const y = currentY;
+      currentY += baseHeight + NODE_Y_GAP;
 
       const info = connectionMap[n.id];
 
@@ -105,7 +112,7 @@ function toFlowNodesByFrame(
         id: n.id,
         type: n.type,
         width: DEFAULT_NODE_WIDTH,
-        height: DEFAULT_NODE_HEIGHT,
+        height: baseHeight,
         position: { x, y },
         data: {
           ...n.data,
@@ -153,7 +160,10 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     .slice(0, clampedIndex + 1)
     .reduce((acc, f) => acc + f.nodes.length, 0);
 
-  const connectionMap = buildConnectionMap(connections);
+  const connectionMap = useMemo(
+    () => buildConnectionMap(connections),
+    [connections],
+  );
 
   const initialNodes = totalNodesUpToFrame
     ? toFlowNodesByFrame(frameList, clampedIndex, connectionMap)
@@ -242,10 +252,25 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
 
   useEffect(() => {
     if (totalNodesUpToFrame === 0) return;
+
     const flowNodes = toFlowNodesByFrame(frameList, clampedIndex, connectionMap);
     setNodes(flowNodes);
-    requestAnimationFrame(() => fitView());
-  }, [clampedIndex, fitView, frames, connections]);
+
+    const currentFrame = frameList[clampedIndex];
+    if (!currentFrame) return;
+
+    const currentIds = new Set(currentFrame.nodes.map((n) => n.id));
+
+    requestAnimationFrame(() => {
+      const targetNodes = flowNodes.filter((n) => currentIds.has(n.id));
+      if (!targetNodes.length) return;
+
+      fitView({
+        nodes: targetNodes,
+        padding: 0.2,
+      });
+    });
+  }, [clampedIndex, frameList, connectionMap, totalNodesUpToFrame]);
 
   const visibleNodeIds = new Set(nodes.map((n) => n.id));
 
@@ -301,7 +326,6 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
         onEdgeMouseLeave={onEdgeMouseLeave}
         onEdgeClick={onEdgeClick}
         nodesDraggable={false}
-        fitView
         proOptions={{ hideAttribution: true }}
         nodeTypes={{ HumanMessage: MessageNode, AIMessage: MessageNode, ToolMessage: MessageNode, SystemMessage: MessageNode }}
         edgeTypes={{ connection: ConnectionEdge }}

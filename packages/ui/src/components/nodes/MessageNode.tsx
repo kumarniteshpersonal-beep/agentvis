@@ -255,6 +255,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         minWidth: 200,
         width: 320,
         maxWidth: 320,
+        height: messageType === "ToolMessage" ? 380 : "auto",
         bgcolor: "#ffffff",
         borderColor: isHighlighted ? "#E0531F" : "#e5e7eb",
         cursor: "pointer",

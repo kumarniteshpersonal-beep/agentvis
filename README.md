@@ -13,13 +13,22 @@ By exposing the influence flow behind each decision, it transforms opaque agent 
 
 ## *agentvis* reasoning visualization example
 
-![flow_diagram](./images/vis.png)
+![flow_diagram](./packages/ui/public/agentvis_logo.svg)
 
-## Installation Guide
+## Installation
 
-```
+Install core:
+
+```bash
 pip install agentvis
 ```
+
+With LangChain support:
+
+```bash
+pip install agentvis[langchain]
+```
+
 
 ## How to generate an agent reasoning graph
 
@@ -75,3 +84,7 @@ print(link)
 ```
 
 > Open the printed `link` in your browser to inspect the full reasoning trace of the `websearch` agent. 
+
+## License
+
+This project is licensed under the Apache License 2.0.

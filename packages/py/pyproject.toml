@@ -1,0 +1,18 @@
+[project]
+name = "agentvis"
+version = "0.1.0"
+description = "Framework-agnostic reasoning trace visualization tool for AI agents."
+readme = "../../README.md"
+license = { text = "Apache License 2.0" }
+requires-python = ">=3.9"
+
+authors = [
+  { name = "Nitesh Kumar" }
+]
+
+dependencies = [
+  "bm25s==0.3.0",
+]
+
+[project.optional-dependencies]
+langchain = ["langchain>=0.1.0"]
