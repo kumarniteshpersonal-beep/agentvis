@@ -2,7 +2,7 @@
 
 <p align="center">
   <picture align="center">
-    <img align="center" alt="agentvis logo" src="../ui/public/agentvis_logo.svg" width="560">
+    <img align="center" alt="agentvis logo" src="https://raw.githubusercontent.com/kumarniteshpersonal-beep/agentvis/968caea6e04577583d7d16f7015b9925362d5f53/packages/ui/public/agentvis_logo.svg" width="560">
   </picture>
 </p>
 
@@ -13,7 +13,7 @@ By exposing the influence flow behind each decision, it transforms opaque agent 
 
 ## *agentvis* reasoning visualization example
 
-![flow_diagram](./images/vis.png)
+![flow_diagram](https://raw.githubusercontent.com/kumarniteshpersonal-beep/agentvis/refs/heads/main/packages/py/images/vis.png)
 
 ## Installation
 
