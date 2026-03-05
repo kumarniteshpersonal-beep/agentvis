@@ -7,7 +7,7 @@ import base64
 class LinkExportStrategy(ExportStrategy):
     def __init__(self, graph: AgentGraph):
         super().__init__(graph)
-        self.BASE_URL = "http://localhost:5173"
+        self.BASE_URL = "https://agentvis.vercel.app"
 
     def export(self) -> str:
         data = {

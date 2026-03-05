@@ -2,7 +2,7 @@
 name = "agentvis"
 version = "0.1.0"
 description = "Framework-agnostic reasoning trace visualization tool for AI agents."
-readme = "../../README.md"
+readme = "README.md"
 license = { text = "Apache License 2.0" }
 requires-python = ">=3.9"
 
@@ -12,7 +12,16 @@ authors = [
 
 dependencies = [
   "bm25s==0.3.0",
+  "pydantic>=2.0.0",
 ]
 
 [project.optional-dependencies]
 langchain = ["langchain>=0.1.0"]
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agentvis*"]
