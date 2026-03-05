@@ -1,12 +1,14 @@
-import { Card, CardContent, Typography, Chip, Box, Stack, SvgIconTypeMap, SvgIconPropsColorOverrides } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Stack, SvgIconTypeMap, SvgIconPropsColorOverrides, Drawer, IconButton } from "@mui/material";
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import Face6Icon from '@mui/icons-material/Face6';
 import SettingsIcon from '@mui/icons-material/Settings';
+import CloseIcon from '@mui/icons-material/Close';
 import { OverridableComponent } from "@mui/material/OverridableComponent";
 import { OverridableStringUnion } from "@mui/types";
 import { ChipPropsColorOverrides } from "@mui/material/Chip";
 import { Handle, Position } from "@xyflow/react";
+import { useState } from "react";
 
 type MessageNodeProps = {
   id?: string;
@@ -42,6 +44,8 @@ const TYPE_CONFIG: Record<
 };
 
 function MessageNode({ id, type, data }: MessageNodeProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const messageType = type ?? (data as any)?.messageType ?? "Message";
   const config = TYPE_CONFIG[messageType] ?? { icon: "", color: "default" as ChipColor };
 
@@ -54,6 +58,195 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
   const hasSourceHandle = Boolean((data as any)?.hasSourceHandle);
   const hasTargetHandle = Boolean((data as any)?.hasTargetHandle);
   const isHighlighted = Boolean((data as any)?.isHighlighted);
+
+  const renderContent = (compact: boolean) => (
+    <>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+        {config.icon && <config.icon color={config.iconColor} />}
+        <Chip
+          size="small"
+          label={messageType}
+          color={config.color}
+          variant="outlined"
+          sx={{
+            height: 22,
+            borderRadius: "999px",
+            fontSize: 10,
+            px: 0.75,
+            textTransform: "uppercase",
+            letterSpacing: 0.6,
+          }}
+        />
+        {id && (
+          <Typography variant="caption" sx={{ color: "#64748b", fontSize: 10 }}>
+            ID: {id.substr(id.length - 5)}
+          </Typography>
+        )}
+      </Stack>
+      {toolName && (
+        <Box mt={compact ? 1.25 : 2}>
+          <Typography
+            variant="overline"
+            sx={{
+              fontSize: 9,
+              letterSpacing: 1.4,
+              color: "#64748b",
+              display: "block",
+            }}
+          >
+            FUNCTION
+          </Typography>
+          <Box
+            sx={{
+              mt: 0.25,
+              borderRadius: 1,
+              bgcolor: "#f1f5f9",
+              px: compact ? 1 : 1.5,
+              py: compact ? 0.75 : 1.25,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{ fontSize: 13, color: "#0f172a", fontWeight: 500 }}
+            >
+              {toolName}
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
+      {hasArgs && (
+        <Box mt={toolName ? (compact ? 1.5 : 2) : 1}>
+          <Typography
+            variant="overline"
+            sx={{
+              fontSize: 9,
+              letterSpacing: 1.4,
+              color: "#64748b",
+              display: "block",
+            }}
+          >
+            PARAMETERS
+          </Typography>
+          <Box
+            sx={{
+              mt: 0.5,
+              borderRadius: 1,
+              bgcolor: "#f8fafc",
+              px: compact ? 1 : 1.5,
+              py: compact ? 0.5 : 1,
+            }}
+          >
+            {Object.entries(toolArgs!).map(([k, v]) => {
+              const displayValue =
+                typeof v === "string" ? v : JSON.stringify(v, null, compact ? 0 : 2);
+
+              return (
+                <Stack
+                  key={k}
+                  direction="row"
+                  alignItems="flex-start"
+                  sx={{
+                    fontSize: 12,
+                    color: "#0f172a",
+                    mb: compact ? 0.25 : 0.5,
+                    width: "100%",
+                    justifyContent: "space-between",
+                    columnGap: 0.75,
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color: "#16a34a",
+                      fontSize: 12,
+                      maxWidth: "35%",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={k}
+                  >
+                    {k}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: 12,
+                      maxWidth: "60%",
+                      flexGrow: 1,
+                      textAlign: "right",
+                      whiteSpace: compact ? "nowrap" : "normal",
+                      overflow: compact ? "hidden" : "visible",
+                      textOverflow: compact ? "ellipsis" : "unset",
+                      wordBreak: compact ? "normal" : "break-word",
+                    }}
+                    title={displayValue}
+                  >
+                    {displayValue}
+                  </Typography>
+                </Stack>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
+
+      {content !== undefined && (
+        <Box mt={hasArgs || toolName ? (compact ? 1.5 : 2) : 1.25}>
+          <Typography
+            variant="overline"
+            sx={{
+              fontSize: 9,
+              letterSpacing: 1.4,
+              color: "#64748b",
+              display: "block",
+            }}
+          >
+            CONTENT
+          </Typography>
+          <Box
+            sx={{
+              mt: compact ? 0.25 : 0.75,
+              borderRadius: 1,
+              bgcolor: "#f8fafc",
+              px: compact ? 1 : 1.5,
+              py: compact ? 0.75 : 1.25,
+              ...(compact
+                ? {
+                    maxHeight: 120,
+                    overflowY: "auto",
+                  }
+                : {}),
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: 13,
+                color:
+                  typeof content === "string" && content.trim() === ""
+                    ? "#94a3b8"
+                    : "#0f172a",
+                fontStyle:
+                  typeof content === "string" && content.trim() === ""
+                    ? "italic"
+                    : "normal",
+                whiteSpace: "pre-wrap",
+                ...(compact
+                  ? {
+                      overflowWrap: "anywhere",
+                      wordBreak: "break-word",
+                    }
+                  : {}),
+              }}
+            >
+              {typeof content === "string" && content.trim() === "" ? "empty" : content}
+            </Typography>
+          </Box>
+        </Box>
+      )}
+    </>
+  );
 
   return (
     <Card
@@ -80,145 +273,10 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         },
       }}
       className="nodrag"
+      onClick={() => setDrawerOpen(true)}
     >
       <CardContent sx={{ p: 1.5 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-          <config.icon color={config.iconColor} />
-          <Chip
-            size="small"
-            label={messageType}
-            color={config.color}
-            variant="outlined"
-            sx={{
-              height: 22,
-              borderRadius: "999px",
-              fontSize: 10,
-              px: 0.75,
-              textTransform: "uppercase",
-              letterSpacing: 0.6,
-            }}
-          />
-          {id && (
-            <Typography variant="caption" sx={{ color: "#64748b", fontSize: 10 }}>
-              ID: {id.substr(id.length - 5)}
-            </Typography>
-          )}
-        </Stack>
-        {toolName && (
-          <Box mt={1.25}>
-            <Typography
-              variant="overline"
-              sx={{
-                fontSize: 9,
-                letterSpacing: 1.4,
-                color: "#64748b",
-                display: "block",
-              }}
-            >
-              FUNCTION
-            </Typography>
-            <Box
-              sx={{
-                mt: 0.25,
-                borderRadius: 1,
-                bgcolor: "#f1f5f9",
-                px: 1,
-                py: 0.75,
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ fontSize: 13, color: "#0f172a", fontWeight: 500 }}
-              >
-                {toolName}
-              </Typography>
-            </Box>
-          </Box>
-        )}
-
-        {hasArgs && (
-          <Box mt={toolName ? 1.5 : 1}>
-            <Typography
-              variant="overline"
-              sx={{
-                fontSize: 9,
-                letterSpacing: 1.4,
-                color: "#64748b",
-                display: "block",
-              }}
-            >
-              PARAMETERS
-            </Typography>
-            <Box
-              sx={{
-                mt: 0.5,
-                borderRadius: 1,
-                bgcolor: "#f8fafc",
-                px: 1,
-                py: 0.5,
-              }}
-            >
-              {Object.entries(toolArgs!).map(([k, v]) => (
-                <Stack
-                  key={k}
-                  direction="row"
-                  justifyContent="space-between"
-                  sx={{ fontSize: 12, color: "#0f172a" }}
-                >
-                  <Typography sx={{ color: "#16a34a", fontSize: 12 }}>{k}</Typography>
-                  <Typography sx={{ fontSize: 12 }}>{String(v)}</Typography>
-                </Stack>
-              ))}
-            </Box>
-          </Box>
-        )}
-
-        {content !== undefined && (
-          <Box mt={hasArgs || toolName ? 1.5 : 1.25}>
-            <Typography
-              variant="overline"
-              sx={{
-                fontSize: 9,
-                letterSpacing: 1.4,
-                color: "#64748b",
-                display: "block",
-              }}
-            >
-              CONTENT
-            </Typography>
-            <Box
-              sx={{
-                mt: 0.25,
-                borderRadius: 1,
-                bgcolor: "#f8fafc",
-                px: 1,
-                py: 0.75,
-                maxHeight: 120,
-                overflowY: "auto",
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{
-                  fontSize: 13,
-                  color:
-                    typeof content === "string" && content.trim() === ""
-                      ? "#94a3b8"
-                      : "#0f172a",
-                  fontStyle:
-                    typeof content === "string" && content.trim() === ""
-                      ? "italic"
-                      : "normal",
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
-                  wordBreak: "break-word",
-                }}
-              >
-                {typeof content === "string" && content.trim() === "" ? "empty" : content}
-              </Typography>
-            </Box>
-          </Box>
-        )}
+        {renderContent(true)}
       </CardContent>
       {hasTargetHandle && (
         <Handle
@@ -234,6 +292,58 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
           style={{ top: "50%", transform: "translateY(-50%)", right: -8 }}
         />
       )}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={(event) => {
+          (event as React.MouseEvent<HTMLDivElement>).stopPropagation();
+          setDrawerOpen(false);
+        }}
+        PaperProps={{
+          sx: {
+            width: 420,
+            maxWidth: "80vw",
+            p: 2,
+            boxSizing: "border-box",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 2,
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Message details
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={(event) => {
+                event.stopPropagation();
+                setDrawerOpen(false);
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+          <Box sx={{ flex: 1, overflowY: "auto" }}>
+            {renderContent(false)}
+          </Box>
+        </Box>
+      </Drawer>
     </Card>
   );
 }
