@@ -2,7 +2,7 @@
 
 <p align="center">
   <picture align="center">
-    <img align="center" alt="agentvis logo" src="./images/agentvis_logo.svg" width="560">
+    <img align="center" alt="agentvis logo" src="./packages/ui/public/agentvis_logo.svg" width="560">
   </picture>
 </p>
 
@@ -13,7 +13,7 @@ By exposing the influence flow behind each decision, it transforms opaque agent 
 
 ## *agentvis* reasoning visualization example
 
-![flow_diagram](./packages/ui/public/agentvis_logo.svg)
+![flow_diagram](./images/vis.png)
 
 ## Installation
 
