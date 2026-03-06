@@ -27,4 +27,5 @@ agentvis/core/retriever_strategy/models.py
 agentvis/framework/__init__.py
 agentvis/framework/base.py
 agentvis/framework/langchain/__init__.py
+agentvis/framework/langchain/helper.py
 agentvis/framework/langchain/main.py
