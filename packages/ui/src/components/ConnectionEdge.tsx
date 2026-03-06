@@ -111,6 +111,7 @@ export default function ConnectionEdge(props: EdgeProps) {
               background: "#FFFFFF",
               cursor: "pointer",
               padding: 0,
+              visibility: "hidden",
             }}
             className="button-edge__button"
           >

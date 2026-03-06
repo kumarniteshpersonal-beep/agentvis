@@ -14,11 +14,13 @@ class BM25RetrieverStrategy(RetrieverStrategy):
         tokenized_corpus = [self.tokenize(doc) for doc in self.documents]
         self.retriever.index(tokenized_corpus)
 
-    def retrieve(self, query: str, k: int = 1) -> SelectedDocument:
+    def retrieve(self, query: str, k: int = 1) -> list[SelectedDocument]:
         try:
-            return SelectedDocument(
-                document_index=int(self.retriever.retrieve([self.tokenize(query)], k=k).documents[0][0]),
-                confidence_score=float(self.retriever.retrieve([self.tokenize(query)], k=k).scores[0][0])
-            )
+            documents = self.retriever.retrieve([self.tokenize(query)], k=k).documents[0]
+            scores = self.retriever.retrieve([self.tokenize(query)], k=k).scores[0]
+            return [SelectedDocument(
+                document_index=int(doc),
+                confidence_score=min(float(score), 1.0)
+            ) for doc, score in zip(documents, scores)]
         except IndexError:
-            return None
+            return []

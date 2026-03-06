@@ -12,6 +12,9 @@ import { OverridableStringUnion } from "@mui/types";
 import { ChipPropsColorOverrides } from "@mui/material/Chip";
 import { Handle, Position } from "@xyflow/react";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { JsonView, allExpanded } from "react-json-view-lite";
+import "react-json-view-lite/dist/index.css";
 
 type MessageNodeProps = {
   id?: string;
@@ -351,6 +354,39 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                         >
                           {block.reasoning || "–"}
                         </Typography>
+                      ) : !compact && typeof textValue === "string" && !isEmptyText ? (
+                        <Box
+                          sx={{
+                            "& *": {
+                              fontFamily:
+                                "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                            },
+                            "& p": {
+                              margin: "0 0 4px",
+                              fontSize: 13,
+                              color: "#0f172a",
+                            },
+                            "& h1, & h2, & h3, & h4": {
+                              margin: "4px 0",
+                              fontWeight: 600,
+                              fontSize: 14,
+                            },
+                            "& ul, & ol": {
+                              paddingLeft: "1.1rem",
+                              margin: "4px 0",
+                            },
+                            "& code": {
+                              fontFamily:
+                                "SF Mono, ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                              fontSize: 12,
+                              backgroundColor: "#f3f4f6",
+                              borderRadius: 4,
+                              padding: "1px 4px",
+                            },
+                          }}
+                        >
+                          <ReactMarkdown>{textValue}</ReactMarkdown>
+                        </Box>
                       ) : (
                         <Typography
                           variant="body2"
@@ -369,33 +405,94 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                   );
                 })}
               </Stack>
-            ) : (
-              <Typography
-                variant="body2"
-                sx={{
-                  fontSize: 13,
-                  color:
-                    typeof content === "string" && content.trim() === ""
-                      ? "#94a3b8"
-                      : "#0f172a",
-                  fontStyle:
-                    typeof content === "string" && content.trim() === ""
-                      ? "italic"
-                      : "normal",
-                  whiteSpace: "pre-wrap",
-                  ...(compact
-                    ? {
-                        overflowWrap: "anywhere",
-                        wordBreak: "break-word",
-                      }
-                    : {}),
-                }}
-              >
-                {typeof content === "string" && content.trim() === ""
-                  ? "empty"
-                  : (content as any)}
-              </Typography>
-            )}
+            ) : (() => {
+              const isString = typeof content === "string";
+              const trimmed = isString ? content.trim() : "";
+              const isEmpty = isString && trimmed === "";
+
+              // Drawer-only enhanced rendering for string content
+              if (!compact && isString && !isEmpty) {
+                let parsed: unknown = null;
+                let isJsonObject = false;
+
+                try {
+                  parsed = JSON.parse(trimmed);
+                  isJsonObject =
+                    parsed !== null &&
+                    (Array.isArray(parsed) || typeof parsed === "object");
+                } catch {
+                  isJsonObject = false;
+                }
+
+                if (isJsonObject) {
+                  return (
+                    <Box
+                      sx={{
+                        borderRadius: 1,
+                        border: "1px solid rgba(148,163,184,0.5)",
+                        bgcolor: "#f9fafb",
+                        width: "100%",
+                        height: "100%",
+                        overflow: "auto",
+                      }}
+                    >
+                      <JsonView data={parsed as any} shouldExpandNode={allExpanded} />
+                    </Box>
+                  );
+                }
+
+                return (
+                  <Box
+                    sx={{
+                      "& *": {
+                        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                      },
+                      "& p": { margin: "0 0 4px", fontSize: 13, color: "#0f172a" },
+                      "& h1, & h2, & h3, & h4": {
+                        margin: "4px 0",
+                        fontWeight: 600,
+                        fontSize: 14,
+                      },
+                      "& ul, & ol": {
+                        paddingLeft: "1.1rem",
+                        margin: "4px 0",
+                      },
+                      "& code": {
+                        fontFamily:
+                          "SF Mono, ui-monospace, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                        fontSize: 12,
+                        backgroundColor: "#f3f4f6",
+                        borderRadius: 4,
+                        padding: "1px 4px",
+                      },
+                    }}
+                  >
+                    <ReactMarkdown>{content as string}</ReactMarkdown>
+                  </Box>
+                );
+              }
+
+              // Compact node view or non-string: keep original simple text UI
+              return (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: 13,
+                    color: isEmpty ? "#94a3b8" : "#0f172a",
+                    fontStyle: isEmpty ? "italic" : "normal",
+                    whiteSpace: "pre-wrap",
+                    ...(compact
+                      ? {
+                          overflowWrap: "anywhere",
+                          wordBreak: "break-word",
+                        }
+                      : {}),
+                  }}
+                >
+                  {isEmpty ? "empty" : (content as any)}
+                </Typography>
+              );
+            })()}
           </Box>
         </Box>
       )}

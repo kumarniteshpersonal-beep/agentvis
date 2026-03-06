@@ -20,7 +20,8 @@ class StrategyToolToTool(ConnectionCreationStrategy):
                 for key,value in tool_args.items():
                     if not tool_outputs:
                         break
-                    selected_document = self.context_retriever.retrieve(str(value))
+                    selected_documents = self.context_retriever.retrieve(str(value))
+                    selected_document = selected_documents[0] if selected_documents else None
                     if selected_document:
                         document_index, confidence_score = selected_document.document_index, selected_document.confidence_score
                         if confidence_score == 0.0:
