@@ -52,5 +52,6 @@ class StrategyToolToTool(ConnectionCreationStrategy):
                     break
                 if node.data["content"]:
                     tool_outputs.append((node.id, node.data["content"]))
+            if tool_outputs:
                 self.context_retriever.set_strategy(BM25RetrieverStrategy(documents=[str(tool_output) for _,tool_output in tool_outputs]))
                 self.context_retriever.index()
