@@ -152,7 +152,9 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
   const frames = graph.frames;
   const connections = graph.connections;
   const frameList = Array.isArray(frames) ? frames : [frames];
-  const [frameIndex, setFrameIndex] = useState(0);
+  const initialFrameIndex =
+    frameList.length === 0 ? 0 : Math.max(0, frameList.length - 1);
+  const [frameIndex, setFrameIndex] = useState(initialFrameIndex);
 
   const clampedIndex =
     frameList.length === 0 ? 0 : Math.min(frameIndex, frameList.length - 1);
@@ -177,6 +179,9 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
   const [hoveredTargetNodeId, setHoveredTargetNodeId] = useState<string | null>(null);
   const [popperPosition, setPopperPosition] = useState<{ x: number; y: number } | null>(null);
   const { fitView } = useReactFlow();
+
+  const hasPrev = clampedIndex > 0;
+  const hasNext = clampedIndex < frameList.length - 1;
 
   const onPrev = () => {
     setFrameIndex((idx) => Math.max(0, idx - 1));
@@ -256,17 +261,8 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
     const flowNodes = toFlowNodesByFrame(frameList, clampedIndex, connectionMap);
     setNodes(flowNodes);
 
-    const currentFrame = frameList[clampedIndex];
-    if (!currentFrame) return;
-
-    const currentIds = new Set(currentFrame.nodes.map((n) => n.id));
-
     requestAnimationFrame(() => {
-      const targetNodes = flowNodes.filter((n) => currentIds.has(n.id));
-      if (!targetNodes.length) return;
-
       fitView({
-        nodes: targetNodes,
         padding: 0.2,
       });
     });
@@ -334,7 +330,8 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
         <Panel position="bottom-left">
           <div style={{ display: "flex", gap: 4 }}>
             <button
-              onClick={onPrev}
+              onClick={hasPrev ? onPrev : undefined}
+              disabled={!hasPrev}
               className="nodrag"
               style={{
                 width: 28,
@@ -343,15 +340,17 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
                 border: "1px solid #b1b1b7",
                 borderRadius: 4,
                 background: "#fff",
-                cursor: "pointer",
-                color: "#e0531f",
+                cursor: hasPrev ? "pointer" : "not-allowed",
+                color: hasPrev ? "#e0531f" : "#cbd5e1",
                 fontSize: 14,
+                opacity: hasPrev ? 1 : 0.5,
               }}
             >
               <ArrowLeftIcon />
             </button>
             <button
-              onClick={onNext}
+              onClick={hasNext ? onNext : undefined}
+              disabled={!hasNext}
               className="nodrag"
               style={{
                 width: 28,
@@ -360,9 +359,10 @@ function AgentVisualizerInner({ graph }: AgentVisualizerProps) {
                 border: "1px solid #b1b1b7",
                 borderRadius: 4,
                 background: "#fff",
-                cursor: "pointer",
-                color: "#e0531f",
+                cursor: hasNext ? "pointer" : "not-allowed",
+                color: hasNext ? "#e0531f" : "#cbd5e1",
                 fontSize: 14,
+                opacity: hasNext ? 1 : 0.5,
               }}
             >
               <ArrowRightIcon />

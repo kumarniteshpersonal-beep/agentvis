@@ -2,6 +2,7 @@ from agentvis.framework.base import AIFrameWork
 from agentvis.core.models import LLMMessage, Frame, ToolCall, AgentGraph
 from agentvis.core import BusinessLogic
 from langchain.messages import ToolMessage, AIMessage, HumanMessage, SystemMessage
+from .helper import normalize_content
 
 class LangChainAdapter(AIFrameWork):
     def __init__(self):
@@ -25,7 +26,7 @@ class LangChainAdapter(AIFrameWork):
             _messages.append(LLMMessage(
                 id=message.id,
                 type=message.__class__.__name__,
-                content=message.content,
+                content=normalize_content(message.content),
                 tool_calls=tool_calls,
                 tool_name=tool_name,
                 tool_call_id=tool_call_id

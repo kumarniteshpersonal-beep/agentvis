@@ -49,7 +49,7 @@ class ToolCall(BaseModel):
 class LLMMessage(BaseModel):
     id: str
     type: MessageType
-    content: str = ""
+    content: str | list[dict] = ""
     tool_calls: list[ToolCall] = []
     tool_name: str = ""
     tool_call_id: str = ""

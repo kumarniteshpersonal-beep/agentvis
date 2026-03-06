@@ -4,6 +4,9 @@ import ConstructionIcon from '@mui/icons-material/Construction';
 import Face6Icon from '@mui/icons-material/Face6';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CloseIcon from '@mui/icons-material/Close';
+import MessageIcon from '@mui/icons-material/Message';
+import ImageIcon from '@mui/icons-material/Image';
+import PsychologyIcon from '@mui/icons-material/Psychology';
 import { OverridableComponent } from "@mui/material/OverridableComponent";
 import { OverridableStringUnion } from "@mui/types";
 import { ChipPropsColorOverrides } from "@mui/material/Chip";
@@ -14,7 +17,7 @@ type MessageNodeProps = {
   id?: string;
   type?: string;
   data?: {
-    content?: string;
+    content?: unknown;
     tool_name?: string;
     tool_args?: Record<string, unknown>;
   };
@@ -43,6 +46,18 @@ const TYPE_CONFIG: Record<
   SystemMessage: { icon: SettingsIcon, color: "warning", iconColor: "warning" },
 };
 
+const CONTENT_TYPE_COLORS: Record<
+  string,
+  {
+    bg: string;
+    fg: string;
+  }
+> = {
+  text: { bg: "#ffffff", fg: "#0f172a" },
+  reasoning: { bg: "#ffffff", fg: "#0f172a" },
+  image: { bg: "#ffffff", fg: "#0f172a" },
+};
+
 function MessageNode({ id, type, data }: MessageNodeProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -58,6 +73,19 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
   const hasSourceHandle = Boolean((data as any)?.hasSourceHandle);
   const hasTargetHandle = Boolean((data as any)?.hasTargetHandle);
   const isHighlighted = Boolean((data as any)?.isHighlighted);
+
+  const contentBlocks =
+    Array.isArray(content) && content.length > 0
+      ? content.map((item: any) => {
+          if (typeof item === "string") {
+            return { type: "text", text: item };
+          }
+          if (item && typeof item === "object") {
+            return item as any;
+          }
+          return { type: "text", text: String(item) };
+        })
+      : null;
 
   const renderContent = (compact: boolean) => (
     <>
@@ -208,40 +236,166 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
             sx={{
               mt: compact ? 0.25 : 0.75,
               borderRadius: 1,
-              bgcolor: "#f8fafc",
+              bgcolor: "#ffffff",
               px: compact ? 1 : 1.5,
               py: compact ? 0.75 : 1.25,
               ...(compact
                 ? {
-                    maxHeight: 120,
+                    maxHeight:
+                      Array.isArray(contentBlocks) && contentBlocks.length > 0
+                        ? 220
+                        : 120,
                     overflowY: "auto",
                   }
                 : {}),
             }}
           >
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: 13,
-                color:
-                  typeof content === "string" && content.trim() === ""
-                    ? "#94a3b8"
-                    : "#0f172a",
-                fontStyle:
-                  typeof content === "string" && content.trim() === ""
-                    ? "italic"
-                    : "normal",
-                whiteSpace: "pre-wrap",
-                ...(compact
-                  ? {
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
-                    }
-                  : {}),
-              }}
-            >
-              {typeof content === "string" && content.trim() === "" ? "empty" : content}
-            </Typography>
+            {Array.isArray(contentBlocks) && contentBlocks.length > 0 ? (
+              <Stack spacing={compact ? 0.75 : 1.25}>
+                {contentBlocks.map((block: any, idx: number) => {
+                  const typeKey = String(block.type || "text").toLowerCase();
+                  const palette =
+                    CONTENT_TYPE_COLORS[typeKey] ?? CONTENT_TYPE_COLORS["text"];
+
+                  const textValue =
+                    block.text ??
+                    block.content ??
+                    block.value ??
+                    (typeof block === "string"
+                      ? block
+                      : JSON.stringify(block, null, 2));
+
+                  const isEmptyText =
+                    typeof textValue === "string" &&
+                    textValue.trim().length === 0;
+
+                  const TypeIcon =
+                    typeKey === "image"
+                      ? ImageIcon
+                      : typeKey === "reasoning"
+                      ? PsychologyIcon
+                      : MessageIcon;
+
+                  return (
+                    <Box
+                      key={idx}
+                      sx={{
+                        borderRadius: 1.5,
+                        bgcolor: palette.bg,
+                        border: "1px solid rgba(148,163,184,0.45)",
+                        px: compact ? 1 : 1.25,
+                        py: compact ? 0.75 : 1,
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={0.75}
+                        mb={compact ? 0.25 : 0.5}
+                      >
+                        <TypeIcon
+                          sx={{
+                            fontSize: 14,
+                            color: "#475569",
+                          }}
+                        />
+                        <Typography
+                          variant="overline"
+                          sx={{
+                            fontSize: 9,
+                            letterSpacing: 1.4,
+                            textTransform: "uppercase",
+                            color: "#64748b",
+                          }}
+                        >
+                          {typeKey === "image"
+                            ? "Attachment"
+                            : typeKey === "reasoning"
+                            ? "Reasoning"
+                            : "Message"}
+                        </Typography>
+                      </Stack>
+
+                      {typeKey === "image" && block.url ? (
+                        <Box
+                          sx={{
+                            mt: compact ? 0.25 : 0.5,
+                            borderRadius: 1,
+                            overflow: "hidden",
+                            border: "1px solid rgba(148, 163, 184, 0.3)",
+                            bgcolor: "#f9fafb",
+                          }}
+                        >
+                          <img
+                            src={block.url}
+                            alt={`content block ${idx + 1}`}
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              maxHeight: compact ? 160 : 260,
+                              objectFit: "cover",
+                            }}
+                          />
+                        </Box>
+                      ) : typeKey === "reasoning" ? (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily:
+                              "SF Mono, ui-monospace, Menlo, Monaco, monospace",
+                            fontSize: compact ? 11 : 12,
+                            color: "#0f172a",
+                            whiteSpace: "pre-wrap",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {block.reasoning || "–"}
+                        </Typography>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontSize: compact ? 12 : 13,
+                            color: isEmptyText ? "#64748b" : "#0f172a",
+                            fontStyle: isEmptyText ? "italic" : "normal",
+                            whiteSpace: "pre-wrap",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {isEmptyText ? "empty" : textValue}
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Stack>
+            ) : (
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: 13,
+                  color:
+                    typeof content === "string" && content.trim() === ""
+                      ? "#94a3b8"
+                      : "#0f172a",
+                  fontStyle:
+                    typeof content === "string" && content.trim() === ""
+                      ? "italic"
+                      : "normal",
+                  whiteSpace: "pre-wrap",
+                  ...(compact
+                    ? {
+                        overflowWrap: "anywhere",
+                        wordBreak: "break-word",
+                      }
+                    : {}),
+                }}
+              >
+                {typeof content === "string" && content.trim() === ""
+                  ? "empty"
+                  : (content as any)}
+              </Typography>
+            )}
           </Box>
         </Box>
       )}
