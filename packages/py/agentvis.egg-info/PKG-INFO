@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: agentvis
-Version: 0.1.1
+Version: 0.1.2
 Summary: Framework-agnostic reasoning trace visualization tool for AI agents.
 Author: Nitesh Kumar
 License: Apache License 2.0
