@@ -342,19 +342,56 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                           />
                         </Box>
                       ) : typeKey === "reasoning" ? (
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontFamily:
-                              "SF Mono, ui-monospace, Menlo, Monaco, monospace",
-                            fontSize: compact ? 11 : 12,
-                            color: "#0f172a",
-                            whiteSpace: "pre-wrap",
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {block.reasoning || "–"}
-                        </Typography>
+                        !compact && (block.reasoning || "").trim() ? (
+                          <Box
+                            sx={{
+                              "& *": {
+                                fontFamily:
+                                  "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                              },
+                              "& p": {
+                                margin: "0 0 4px",
+                                fontSize: 13,
+                                color: "#0f172a",
+                              },
+                              "& h1, & h2, & h3, & h4": {
+                                margin: "4px 0",
+                                fontWeight: 600,
+                                fontSize: 14,
+                              },
+                              "& ul, & ol": {
+                                paddingLeft: "1.1rem",
+                                margin: "4px 0",
+                              },
+                              "& code": {
+                                fontFamily:
+                                  "SF Mono, ui-monospace, Menlo, Monaco, Consolas, monospace",
+                                fontSize: 12,
+                                backgroundColor: "#f3f4f6",
+                                borderRadius: 4,
+                                padding: "1px 4px",
+                              },
+                            }}
+                          >
+                            <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                              {block.reasoning || "–"}
+                            </ReactMarkdown>
+                          </Box>
+                        ) : (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontFamily:
+                                "SF Mono, ui-monospace, Menlo, Monaco, monospace",
+                              fontSize: compact ? 11 : 12,
+                              color: "#0f172a",
+                              whiteSpace: "pre-wrap",
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {block.reasoning || "–"}
+                          </Typography>
+                        )
                       ) : !compact && typeof textValue === "string" && !isEmptyText ? (
                         <Box
                           sx={{
