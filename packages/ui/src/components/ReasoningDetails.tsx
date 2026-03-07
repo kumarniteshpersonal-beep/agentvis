@@ -1,4 +1,5 @@
 import { Paper, Typography, Box, Divider, Stack, Chip, LinearProgress } from '@mui/material';
+import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 import { Edge } from '@xyflow/react';
 
 export type ReasoningDetailsProps = {
@@ -49,11 +50,14 @@ export function ReasoningDetails({ edge, position }: ReasoningDetailsProps) {
                 fontFamily: 'system-ui, -apple-system, sans-serif',
             }}
         >
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#111827', mb: 0.5 }}>
-                Tool Influence Detected
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                <BuildCircleIcon color="success" sx={{ fontSize: 20 }} />
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                    Tool Influence Detected
+                </Typography>
+            </Stack>
 
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2.5, flexWrap: "wrap" }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2.5, flexWrap: "wrap", gap: 0.2 }}>
                 <Typography variant="body2" sx={{ color: "#4b5563" }}>
                     Tool
                 </Typography>
