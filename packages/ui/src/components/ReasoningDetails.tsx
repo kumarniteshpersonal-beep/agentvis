@@ -1,4 +1,4 @@
-import { Paper, Typography, Box, Divider, LinearProgress, Stack, Chip } from '@mui/material';
+import { Paper, Typography, Box, Divider, Stack, Chip, LinearProgress } from '@mui/material';
 import { Edge } from '@xyflow/react';
 
 export type ReasoningDetailsProps = {
@@ -8,48 +8,27 @@ export type ReasoningDetailsProps = {
 
 export function ReasoningDetails({ edge, position }: ReasoningDetailsProps) {
     /**
-     * edge.data = {
-        "connection_type": "ToolToTool",
-        "connection_details": {
-          "target_tool_arg": {
-            "query": "weather in Mali"
-          },
-          "source_tool_output_matched_text": "weather in Mali",
-          "source_tool_ouput_start_index": 1798,
-          "source_tool_ouput_end_index": 1811,
-          "confidence_score": 0.6335970163345337
-        }
-      }
-     **/
-    const details = (edge.data as any)?.connection_details;
+     * edge.data = { target_tool_arg, matched_tokens } (flat)
+     * OR { connection_details: { target_tool_arg, matched_tokens, score } } (nested)
+     */
+    const data = edge.data as Record<string, unknown> | undefined;
+    const details = (data?.connection_details as Record<string, unknown>) ?? data;
+    const target_tool_arg = (details?.target_tool_arg as Record<string, unknown>) ?? {};
+    const matched_tokens = (details?.matched_tokens as string[]) ?? [];
+    const score = (details?.score as number) ?? 0.0;
 
-    if (!details) return null;
+    if (!Object.keys(target_tool_arg).length && !matched_tokens.length) return null;
 
-    const {
-        target_tool_arg,
-        source_tool_output_matched_text,
-        confidence_score,
-    } = details;
     const target_tool_arg_name = Object.keys(target_tool_arg)[0] || "unknown argument";
-    const target_tool_arg_value = target_tool_arg[target_tool_arg_name] || "value";
-    const sourceId = edge.source.substr(edge.source.length - 5);
-    const targetId = edge.target.substr(edge.target.length - 5);
+    const target_tool_arg_value = target_tool_arg[target_tool_arg_name] ?? "value";
+    const sourceId = edge.source.slice(-5);
+    const targetId = edge.target.slice(-5);
 
-    const confidencePercent = Math.round(confidence_score * 100);
-
-    let progressColor: "info" | "success" | "warning" | "error" = "info";
-    let barColorHex = "#3b82f6";
-
-    if (confidencePercent >= 40) {
-        progressColor = "success";
-        barColorHex = "#10b981";
-    } else if (confidencePercent >= 20) {
-        progressColor = "info";
-        barColorHex = "#3b82f6";
-    } else {
-        progressColor = "error";
-        barColorHex = "#ef4444";
-    }
+    const confidencePercent = Math.round((typeof score === "number" ? score : 0) * 100);
+    const progressColor: "info" | "success" | "warning" | "error" =
+        confidencePercent >= 40 ? "success" : confidencePercent >= 20 ? "info" : "error";
+    const barColorHex =
+        confidencePercent >= 40 ? "#10b981" : confidencePercent >= 20 ? "#3b82f6" : "#ef4444";
 
     return (
         <Paper
@@ -140,21 +119,30 @@ export function ReasoningDetails({ edge, position }: ReasoningDetailsProps) {
 
                 <Box sx={{ mb: 1.5 }}>
                     <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', mb: 0.5, fontWeight: 500 }}>
-                        Matched Text
+                        Matched Tokens
                     </Typography>
-                    <Box
-                        sx={{
-                            backgroundColor: '#f9fafb',
-                            borderRadius: '8px',
-                            p: 1.25,
-                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                            fontSize: '0.8125rem',
-                            color: '#374151',
-                            border: '1px solid #f3f4f6'
-                        }}
-                    >
-                        {source_tool_output_matched_text}
-                    </Box>
+                    <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ gap: 0.75 }}>
+                        {matched_tokens.length ? (
+                            matched_tokens.map((token, i) => (
+                                <Chip
+                                    key={i}
+                                    label={token}
+                                    size="small"
+                                    sx={{
+                                        height: 24,
+                                        fontWeight: 500,
+                                        borderRadius: '6px',
+                                        bgcolor: '#fef3c7',
+                                        color: '#92400e',
+                                        border: '1px solid #fcd34d',
+                                        '& .MuiChip-label': { px: 1 },
+                                    }}
+                                />
+                            ))
+                        ) : (
+                            <Typography variant="body2" sx={{ color: '#9ca3af', fontStyle: 'italic' }}>—</Typography>
+                        )}
+                    </Stack>
                 </Box>
 
                 <Box>
@@ -171,7 +159,7 @@ export function ReasoningDetails({ edge, position }: ReasoningDetailsProps) {
 
             <Divider sx={{ mb: 2.5, borderColor: '#f3f4f6' }} />
 
-            <Box sx={{ mb: 2.5 }}>
+            <Box sx={{ mb: 0 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: '#6b7280', letterSpacing: '0.05em' }}>
                         CONFIDENCE
@@ -182,7 +170,7 @@ export function ReasoningDetails({ edge, position }: ReasoningDetailsProps) {
                 </Box>
                 <LinearProgress
                     variant="determinate"
-                    value={confidencePercent}
+                    value={Math.min(100, confidencePercent)}
                     color={progressColor}
                     sx={{
                         height: 6,

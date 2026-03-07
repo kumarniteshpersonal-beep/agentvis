@@ -321,6 +321,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [graph, setGraph] = useState<AgentGraph | null>(null);
   const [graphOnly, setGraphOnly] = useState(false);
+  const [viewClicked, setViewClicked] = useState(false);
 
   const onViewGraph = useCallback((g: AgentGraph) => {
     setGraph(g);
@@ -328,6 +329,7 @@ function App() {
     const viewParam = encodeGraphToViewParam(g);
     setViewParamInUrl(viewParam);
     setGraphOnly(true);
+    setViewClicked(true);
   }, []);
 
   useEffect(() => {
@@ -389,7 +391,7 @@ function App() {
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0 }}>
-        {graph ? (
+        {viewClicked && graph ? (
           <AgentVisualizer graph={graph} />
         ) : (
           <Box

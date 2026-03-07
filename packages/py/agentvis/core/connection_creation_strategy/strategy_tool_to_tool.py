@@ -1,7 +1,7 @@
 from agentvis.core.connection_creation_strategy.base import ConnectionCreationStrategy
 from agentvis.core.models import Connection, MessageType, Node, ConnectionData, ConnectionType, ToolOutputMatchDetails
 from agentvis.core.retriever_strategy import ContextRetrieverStrategy, BM25RetrieverStrategy
-from agentvis.core.connection_creation_strategy.helper import get_best_match
+from agentvis.core.connection_creation_strategy.helper import get_best_matched_tokens
 
 class StrategyToolToTool(ConnectionCreationStrategy):
     def __init__(self, nodes_matrix: list[list[Node]]):
@@ -28,7 +28,7 @@ class StrategyToolToTool(ConnectionCreationStrategy):
                             continue
                         u,v = tool_outputs[document_index][0],node.id
                         tool_output_content = tool_outputs[document_index][1]
-                        best_match = get_best_match(tool_output_content, value)
+                        best_match = get_best_matched_tokens(tool_output_content, value)
                         self.connections.append(
                             Connection(
                                 id=f"{u}-{v}", 
@@ -38,10 +38,8 @@ class StrategyToolToTool(ConnectionCreationStrategy):
                                     connection_type=ConnectionType.ToolToTool, 
                                     connection_details=ToolOutputMatchDetails(
                                         target_tool_arg={key:value}, 
-                                        source_tool_output_matched_text=best_match["matched_text"] if best_match else "", 
-                                        source_tool_ouput_start_index=best_match["start"] if best_match else 0, 
-                                        source_tool_ouput_end_index=best_match["end"] if best_match else 0, 
-                                        confidence_score=confidence_score
+                                        matched_tokens=best_match.get("matched_tokens", []),
+                                        score=min(confidence_score, 1.0)
                                     )
                                 )
                             )

@@ -18,10 +18,8 @@ class ConnectionType(str, Enum):
 
 class ToolOutputMatchDetails(BaseModel):
     target_tool_arg: dict = {}
-    source_tool_output_matched_text: str = ""
-    source_tool_ouput_start_index: int = 0
-    source_tool_ouput_end_index: int = 0
-    confidence_score: float = 0.0
+    matched_tokens: list[str] = []
+    score: float = 0.0
 
 class ConnectionData(BaseModel):
     connection_type: ConnectionType
