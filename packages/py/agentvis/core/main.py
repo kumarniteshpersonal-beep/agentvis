@@ -1,4 +1,4 @@
-from agentvis.core.models import LLMMessage, Frame, Node, MessageType, Connection
+from agentvis.core.models import LLMMessage, Frame, Node, MessageType, Connection, AgentGraph
 from agentvis.core.connection_creation_strategy import ContextConnectionCreation, StrategyToolToTool
 from collections import defaultdict
 
@@ -49,3 +49,10 @@ class BusinessLogic:
         context_connection_creation.set_strategy(StrategyToolToTool(nodes_matrix))
         context_connection_creation.create_connections()
         return context_connection_creation.get_connections()
+
+class AgentVis:
+    @staticmethod
+    def build_agent_graph(messages: list[LLMMessage]) -> AgentGraph:
+        frames = BusinessLogic.build_frames(messages)
+        connections = BusinessLogic.create_connections(frames)
+        return AgentGraph(frames=frames, connections=connections)

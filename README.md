@@ -74,16 +74,14 @@ messages = result["messages"]
 ```python
 from agentvis.framework.langchain import LangChainAdapter
 from agentvis.core.export import ExportFactory
+from agentvis.core import AgentVis
 
-# Convert LLM messages into an AgentGraph
-graph = LangChainAdapter().build_agent_graph(messages)
-
-# Export as a short link you can open in the UI
-link = ExportFactory.export_graph(graph=graph, export_strategy="link")  # or "json"
+graph = AgentVis.build_agent_graph(messages=LangChainAdapter().convert(messages))
+link = ExportFactory.export_graph(graph=graph, export_strategy="link")  # export_strategy = "link" | "json"
 print(link)
 ```
 
-> Open the printed `link` in your browser to inspect the full reasoning trace of the `websearch` agent. 
+> Open the printed `link` in your browser to inspect the full reasoning trace of your agent. 
 
 ## License
 

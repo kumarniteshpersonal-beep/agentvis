@@ -1,1 +1,1 @@
-from .main import BusinessLogic
+from .main import AgentVis

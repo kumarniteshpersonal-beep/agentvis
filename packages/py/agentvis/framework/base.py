@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from agentvis.core.models import AgentGraph
+from agentvis.core.models import LLMMessage
 
 class AIFrameWork(ABC):
     def __init__(self):
         pass
 
     @abstractmethod
-    def build_agent_graph(self, messages = []) -> AgentGraph:
+    def convert(self, messages: list[any]) -> list[LLMMessage]:
         raise NotImplementedError
