@@ -13,6 +13,7 @@ import { ChipPropsColorOverrides } from "@mui/material/Chip";
 import { Handle, Position } from "@xyflow/react";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import { JsonView, allExpanded } from "react-json-view-lite";
 import "react-json-view-lite/dist/index.css";
 
@@ -385,7 +386,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                             },
                           }}
                         >
-                          <ReactMarkdown>{textValue}</ReactMarkdown>
+                          <ReactMarkdown rehypePlugins={[rehypeRaw]}>{textValue}</ReactMarkdown>
                         </Box>
                       ) : (
                         <Typography
@@ -467,7 +468,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                       },
                     }}
                   >
-                    <ReactMarkdown>{content as string}</ReactMarkdown>
+                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>{content as string}</ReactMarkdown>
                   </Box>
                 );
               }
