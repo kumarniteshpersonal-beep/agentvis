@@ -1,10 +1,16 @@
 import { createRoot } from "react-dom/client";
 import { useState, useCallback, useEffect } from "react";
-import { Box, Button, Typography, TextField } from "@mui/material";
+import { Box, Button, Typography, TextField, ThemeProvider, createTheme, CssBaseline } from "@mui/material";
 import { AgentVisualizer, type AgentGraph } from "../index";
 import * as pako from "pako";
 
 const BRAND = "#E0531F";
+
+const theme = createTheme({
+  typography: {
+    fontFamily: "'Raleway', sans-serif",
+  },
+});
 
 const root = document.getElementById("root");
 
@@ -413,5 +419,10 @@ function App() {
 }
 
 if (root) {
-  createRoot(root).render(<App />);
+  createRoot(root).render(
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <App />
+    </ThemeProvider>
+  );
 }

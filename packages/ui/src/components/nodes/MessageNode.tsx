@@ -346,8 +346,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                           <Box
                             sx={{
                               "& *": {
-                                fontFamily:
-                                  "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                                fontFamily: "'Raleway', sans-serif",
                               },
                               "& p": {
                                 margin: "0 0 4px",
@@ -396,8 +395,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                         <Box
                           sx={{
                             "& *": {
-                              fontFamily:
-                                "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                              fontFamily: "'Raleway', sans-serif",
                             },
                             "& p": {
                               margin: "0 0 4px",
@@ -483,7 +481,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                   <Box
                     sx={{
                       "& *": {
-                        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                        fontFamily: "'Raleway', sans-serif",
                       },
                       "& p": { margin: "0 0 4px", fontSize: 13, color: "#0f172a" },
                       "& h1, & h2, & h3, & h4": {

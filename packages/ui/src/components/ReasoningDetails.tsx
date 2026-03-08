@@ -47,7 +47,7 @@ export function ReasoningDetails({ edge, position }: ReasoningDetailsProps) {
                 boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
                 p: 2.5,
                 zIndex: 1000,
-                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontFamily: "'Raleway', sans-serif",
             }}
         >
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>

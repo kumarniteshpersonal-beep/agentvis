@@ -1,6 +1,6 @@
 [project]
 name = "agentvis"
-version = "0.1.4"
+version = "0.1.5"
 description = "Framework-agnostic reasoning trace visualization tool for AI agents."
 readme = "README.md"
 license = { text = "Apache License 2.0" }
