@@ -6,5 +6,5 @@ class AIFrameWork(ABC):
         pass
 
     @abstractmethod
-    def convert(self, messages: list[any]) -> list[LLMMessage]:
+    def convert(self, messages: list[any], subagent_messages: dict[str, list[any]]) -> list[LLMMessage]:
         raise NotImplementedError
