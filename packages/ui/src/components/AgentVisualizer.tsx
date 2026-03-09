@@ -50,9 +50,9 @@ export interface AgentVisualizerProps {
   graph: AgentGraph;
 }
 
-const DEFAULT_NODE_WIDTH = 320;
+const DEFAULT_NODE_WIDTH = 340;
 const DEFAULT_NODE_HEIGHT = 260;
-const TOOL_NODE_HEIGHT = 380;
+const TOOL_NODE_HEIGHT = 400;
 const FRAME_X_GAP = 80;
 const NODE_Y_GAP = 32;
 

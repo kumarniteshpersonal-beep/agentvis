@@ -1,4 +1,4 @@
-import { Card, CardContent, Typography, Chip, Box, Stack, SvgIconTypeMap, SvgIconPropsColorOverrides, Drawer, IconButton } from "@mui/material";
+import { Card, CardContent, Typography, Chip, Box, Stack, SvgIconTypeMap, SvgIconPropsColorOverrides, Drawer, IconButton, Button, Dialog, DialogContent } from "@mui/material";
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import Face6Icon from '@mui/icons-material/Face6';
@@ -7,6 +7,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import MessageIcon from '@mui/icons-material/Message';
 import ImageIcon from '@mui/icons-material/Image';
 import PsychologyIcon from '@mui/icons-material/Psychology';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward';
 import { OverridableComponent } from "@mui/material/OverridableComponent";
 import { OverridableStringUnion } from "@mui/types";
 import { ChipPropsColorOverrides } from "@mui/material/Chip";
@@ -16,6 +18,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import { JsonView, allExpanded } from "react-json-view-lite";
 import "react-json-view-lite/dist/index.css";
+import { AgentGraph, AgentVisualizer } from "../AgentVisualizer";
 
 type MessageNodeProps = {
   id?: string;
@@ -24,6 +27,7 @@ type MessageNodeProps = {
     content?: unknown;
     tool_name?: string;
     tool_args?: Record<string, unknown>;
+    subagent_ui?: AgentGraph;
   };
 };
 
@@ -64,6 +68,7 @@ const CONTENT_TYPE_COLORS: Record<
 
 function MessageNode({ id, type, data }: MessageNodeProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [subagentDialogOpen, setSubagentDialogOpen] = useState(false);
 
   const messageType = type ?? (data as any)?.messageType ?? "Message";
   const config = TYPE_CONFIG[messageType] ?? { icon: "", color: "default" as ChipColor };
@@ -71,8 +76,13 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
   const content = data?.content;
   const toolName = data?.tool_name;
   const toolArgs = data?.tool_args;
+  const subagentGraph = data?.subagent_ui;
   const hasArgs =
     toolArgs && typeof toolArgs === "object" && Object.keys(toolArgs).length > 0;
+  const hasSubagentUi =
+    !!subagentGraph &&
+    Array.isArray((subagentGraph as AgentGraph).frames) &&
+    (subagentGraph as AgentGraph).frames.length > 0;
 
   const hasSourceHandle = Boolean((data as any)?.hasSourceHandle);
   const hasTargetHandle = Boolean((data as any)?.hasTargetHandle);
@@ -95,20 +105,44 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
     <>
       <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
         {config.icon && <config.icon color={config.iconColor} />}
-        <Chip
-          size="small"
-          label={messageType}
-          color={config.color}
-          variant="outlined"
-          sx={{
-            height: 22,
-            borderRadius: "999px",
-            fontSize: 10,
-            px: 0.75,
-            textTransform: "uppercase",
-            letterSpacing: 0.6,
-          }}
-        />
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Chip
+            size="small"
+            label={messageType}
+            color={config.color}
+            variant="outlined"
+            sx={{
+              height: 22,
+              borderRadius: "999px",
+              fontSize: 10,
+              px: 0.75,
+              textTransform: "uppercase",
+              letterSpacing: 0.6,
+            }}
+          />
+          {messageType === "ToolMessage" && hasSubagentUi && (
+            <Chip
+              size="small"
+              label="Subagent"
+              color="default"
+              icon={<AccountTreeIcon sx={{ fontSize: 14 }} />}
+              sx={{
+                height: 22,
+                borderRadius: "999px",
+                fontSize: 10,
+                px: 0.75,
+                textTransform: "uppercase",
+                letterSpacing: 0.6,
+                bgcolor: "#E0531F",
+                color: "#ffffff",
+                "& .MuiChip-icon": {
+                  color: "#ffffff",
+                  ml: 0,
+                },
+              }}
+            />
+          )}
+        </Stack>
         {id && (
           <Typography variant="caption" sx={{ color: "#64748b", fontSize: 10 }}>
             ID: {id.substr(id.length - 5)}
@@ -539,10 +573,10 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
     <Card
       variant="outlined"
       sx={{
-        minWidth: 200,
-        width: 320,
-        maxWidth: 320,
-        height: messageType === "ToolMessage" ? 380 : "auto",
+        minWidth: 220,
+        width: 340,
+        maxWidth: 340,
+        minHeight: messageType === "ToolMessage" ? 400 : "auto",
         bgcolor: "#ffffff",
         borderColor: isHighlighted ? "#E0531F" : "#e5e7eb",
         cursor: "pointer",
@@ -566,6 +600,36 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
       <CardContent sx={{ p: 1.5 }}>
         {renderContent(true)}
       </CardContent>
+      {messageType === "ToolMessage" && hasSubagentUi && (
+        <Box sx={{ px: 1.5, pb: 1.5 }}>
+          <Button
+            fullWidth
+            size="small"
+            variant="contained"
+            endIcon={<ArrowOutwardIcon sx={{ fontSize: 16, ml: "auto" }} />}
+            onClick={(event) => {
+              event.stopPropagation();
+              setSubagentDialogOpen(true);
+            }}
+            sx={{
+              mt: 0.5,
+              borderRadius: 0,
+              textTransform: "none",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: 0.4,
+              py: 0.5,
+              px: 1.5,
+              bgcolor: "#E0531F",
+              "&:hover": {
+                bgcolor: "#c64318",
+              },
+            }}
+          >
+            View Reasoning Graph
+          </Button>
+        </Box>
+      )}
       {hasTargetHandle && (
         <Handle
           type="target"
@@ -586,6 +650,11 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         onClose={(event) => {
           (event as React.MouseEvent<HTMLDivElement>).stopPropagation();
           setDrawerOpen(false);
+        }}
+        ModalProps={{
+          sx: {
+            zIndex: (theme) => theme.zIndex.modal + 2,
+          },
         }}
         PaperProps={{
           sx: {
@@ -632,6 +701,73 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
           </Box>
         </Box>
       </Drawer>
+      {hasSubagentUi && subagentGraph && (
+        <Dialog
+          open={subagentDialogOpen}
+          onClose={(event) => {
+            if (event && "stopPropagation" in event && typeof (event as any).stopPropagation === "function") {
+              (event as any).stopPropagation();
+            }
+            setSubagentDialogOpen(false);
+          }}
+          maxWidth="xl"
+          fullWidth
+          PaperProps={{
+            sx: {
+              bgcolor: "#020617",
+              borderRadius: 3,
+              overflow: "hidden",
+            },
+          }}
+        >
+          <DialogContent
+            sx={{
+              p: 0,
+              height: "80vh",
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
+          >
+            <Box
+              sx={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+              }}
+            >
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  zIndex: 10,
+                }}
+              >
+                <IconButton
+                  size="small"
+                  sx={{
+                    bgcolor: "rgba(15,23,42,0.85)",
+                    color: "#e2e8f0",
+                    "&:hover": {
+                      bgcolor: "rgba(15,23,42,1)",
+                    },
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSubagentDialogOpen(false);
+                  }}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </Box>
+              <Box sx={{ width: "100%", height: "100%" }}>
+                <AgentVisualizer graph={subagentGraph as AgentGraph} />
+              </Box>
+            </Box>
+          </DialogContent>
+        </Dialog>
+      )}
     </Card>
   );
 }
