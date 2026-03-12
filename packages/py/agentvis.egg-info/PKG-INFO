@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: agentvis
-Version: 0.1.6
+Version: 0.1.7
 Summary: Framework-agnostic reasoning trace visualization tool for AI agents.
 Author: Nitesh Kumar
 License: Apache License 2.0
@@ -20,7 +20,7 @@ Requires-Dist: langchain>=0.1.0; extra == "langchain"
 </p>
 
 
-*agentvis* visualizes an agent’s reasoning trace, giving you clear insight into *why* the agent chose a particular path or triggered a specific tool call.  
+*agentvis* visualizes an agent’s reasoning trace and run, giving you clear insight into what’s happening behind the scenes and why the agent chose a particular path or triggered a specific tool call. By surfacing behavior that is often opaque, it helps reveal the factors that may have influenced the LLM to select a particular action or tool.
 
 By exposing the influence flow behind each decision, it transforms opaque agent behavior into something understandable and actionable — so you can confidently refine and improve your prompts, which is often the hardest part of building reliable agents. 🧠✨
 
@@ -43,7 +43,7 @@ pip install agentvis[langchain]
 ```
 
 
-## How to generate an agent reasoning graph
+## How to generate an agent reasoning graph 
 
 ### 1. Define your LangChain / LangGraph agent
 
@@ -95,6 +95,134 @@ print(link)
 ```
 
 > Open the printed `link` in your browser to inspect the full reasoning trace of your agent. 
+
+## How to generate an agent reasoning graph in multi agent case
+
+### 1. Define your LangChain / LangGraph deep agent(which implements multi agent system)
+
+```python
+from tavily import TavilyClient
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.agents import create_agent
+from langchain.messages import HumanMessage
+from deepagents import create_deep_agent
+import os
+
+os.environ["TAVILY_API_KEY"] = "<your-tavily-api-key>"
+tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+def internet_search(
+    query: str,
+    max_results: int = 5,
+    topic: Literal["general", "news", "finance"] = "general",
+    include_raw_content: bool = False,
+):
+    """Run a web search"""
+    return tavily_client.search(
+        query,
+        max_results=max_results,
+        include_raw_content=include_raw_content,
+        topic=topic,
+    )
+
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash-lite",
+    temperature=0.7,
+    google_api_key="<your-google-api-key>",
+)
+
+research_subagent = {
+    "name": "research-agent",
+    "description": "Used to research more in depth questions",
+    "system_prompt": "You are a great researcher",
+    "tools": [internet_search],
+    "model": llm,
+}
+subagents = [research_subagent]
+agent = create_deep_agent(model=llm,subagents=subagents)
+```
+
+### 2. Fetch messages and subagent messages from langchain streaming mode
+
+```python
+messages = []
+subagent_messages = defaultdict(list)
+namespace_to_tool_mapping = {}
+
+for chunk in agent.stream(
+    {"messages": [{"role": "user", "content": "what are the main components used to make cough syrup and give me detailed answer for each component"}]},
+    stream_mode=["updates", "tasks"],
+    subgraphs=True,
+):
+    if not (isinstance(chunk, tuple) and len(chunk) == 3):
+        continue
+    namespace, event_type, payload = chunk
+    is_subagent = bool(namespace)
+
+    if event_type == "tasks" and isinstance(payload, dict):
+        if payload.get("name") != "tools":
+            continue
+        task_id = payload.get("id", "")
+        tool_call = (payload.get("input") or {}).get("tool_call")
+        if not task_id or not isinstance(tool_call, dict):
+            continue
+        tool_call_id = tool_call.get("id")
+        if not tool_call_id:
+            continue
+        namespace_to_tool_mapping[f"tools:{task_id}"] = tool_call_id
+    elif event_type == "updates" and isinstance(payload, dict):
+        if is_subagent:
+            tool_call_id = next(s for s in namespace if s.startswith("tools:"))
+            for _, data in payload.items():
+                if data and "messages" in data:
+                    if hasattr(data["messages"], "value"):
+                        new_msgs = data["messages"].value
+                    else:
+                        new_msgs = data["messages"]
+                    subagent_messages[tool_call_id].extend(new_msgs)
+        else:
+            for _, data in payload.items():
+                if data and "messages" in data:
+                    if hasattr(data["messages"], "value"):
+                        new_msgs = data["messages"].value
+                    else:
+                        new_msgs = data["messages"]
+                    messages.extend(new_msgs)
+
+old_keys = list(subagent_messages.keys())
+for key in old_keys:
+    new_key = namespace_to_tool_mapping[key]
+    subagent_messages[new_key] = subagent_messages.pop(key)
+
+```
+
+### 3. Build the reasoning graph with *agentvis* and get a shareable link in exchange of messages produced by agent
+
+```python
+from agentvis.framework.langchain import LangChainAdapter
+from agentvis.core.export import ExportFactory
+from agentvis.core import AgentVis
+
+graph = AgentVis.build_agent_graph(messages=LangChainAdapter().convert(messages,subagent_msgs))
+link = ExportFactory.export_graph(graph=graph, export_strategy="link")  # export_strategy = "link" | "json"
+print(link)
+```
+
+> Open the printed `link` in your browser to inspect the full reasoning trace of your agent. 
+
+### Multi agent reasoning visualization example - [link](https://agentvis.vercel.app/?view=eJztfety3EaW5qsg2LEtklEoou5Vmphw0KRscVsXrii1u7flUCSARBVaKKAGCZAq9zhi_u8T7L95i_3fjzJPsueSmUjUhSzK1rZ7Qx1uu4hLXk6ePPmd75xM_O0oKcVSqqOnf_nbUV7E-lcaHz09GgRCzMZy6o-mIvKHYTjxp6PR1E_kaCLHvaA_iaOjzlG1Xkl4-nm9FPlLqZSYS7gai0ocPf3bUVTklcwreOBuISpPlNKrFtJbijT3omK5KnK4q7xaydirCrj-UcL1er7w1LqsV57IY2-e3sIb0otlJdIMHhS5upOllxSlJ0W0aAo6-vnnH3_ubPUkiz6Ude77QW8WxX0582U8GPiTWTDwp73ZxI96g344nsWj3iz2g6ZP51f3dWhPZbNglgxmcuwnQdDzh5Nw6IskEH4wDJKJFJNR2Js0Vbwtiuy-Si4aWSiSHnR6WWeiAjHcpdXCE96tKFNZrb0icSVaobjvivIjiHUuQeYlyreUWSpvtYgVSVcoVUQpFajWy1VVLFXXe7uQCp4SuRdKLywLEWdr-LOS86JMf4JH0xxKE1GFQ4OlpLn-I83npYxTbEP3ff4-Pz095xtXzY2np6e6BqMPmw1fCCwXb5ViJesqjTyZJDKqqGmeWskoTeDidqUglSxDmaxBX1Yyj-GeV-RUC8qcxYRCxSusZKnC_sCzrIRVKQVUdFEsl_DijirSPMrqWD6l_nmeB33Mq7SqlYInlXfMg3ZTr1YlDi28ctJ0udVWHJ9w7Sn9KLaVxYEFlDLJ5Keud47iwabIT2K5yiS29_T0Un6qymIJQ1uUqwWM1PHln16enJ52vLtFCpMCHmKRYetxqsTlugOCjT5iLawAXdP-Z59AolVRitbouE1dyGxFwlnAzMURz4pCydxb1lGNEqF2i7S8E2vVwXmMtaQVTFCVsu5xp-oVD-GyUFXTL1s79-37WqSJzCUI5PTUNvJSwryYS1WZVt5A911rAQqdqcIMD-hP7Lzhqr_wVFUnydrLoQ-scUuxhqFGPRQ5_OJiu1DrtZJ1XMjVQsZlmkuoNsWJYwcD9KldUddVikUK15bwHjX4KnGGF4qJBBk-0ACRZbKcpxJk1zzB2oktQ4MgSPDwj1Nqu1Ng5HLdJxwhlUv5EwyDnodXZorunInuWMcFFHLPJPTCmk05qCy8kIqMFAwbbsxTCsNaJM0co0Ff75g5N9THb4WS3Baci2rHGtEqjU2OwgmdRiC6NTwc01Coei5K5WUprCOqjkqQRcebZ3VEP6CRKMGyQuOBzYZ1RMLEl6UdNGhB9BGv8IA5UqEylyKrwN7D1MPRABGYlYsWKcekwAvRQpQgclnCaIHsKiwZR1LB3zKP1rbO7zJxC3YVJsz5fNs-ijg2i6P6SFXUOSieUKTUAsoystlhqlBQtKg2TVsWUOhKwCCJMJO2EddggGR5K7CIfS0AI3WLY4GFzcviDtYfqDrkTgqqLKnzeUq_4HmZq7p0614IRZMPa_YU2JQExJo0jfgBlpgSK6cfOMQkX36ryKhyo2oFLWrueoPLKqynH3KANLB2gmw-mkuinCtcWWGpjsp0hfoJT_xwHyaxCwU1_RsoSdWhwAH6oBdvlJgoo4VPV49-dp6oU6xtP7gKAVTJKA79UTQAlDBIRv5UTkN_ksRREotBPOiFjwBXj-rIgSApGQ9ifxL3en44jmf-NBqH06EIhwibfilIErPheDadxn4cRDF0X_Sh-72ZH4bxOByCIEaT5HCQ9Lf3R_9Wy3L9_uip9_7o_u6_P-rAMzBycFvJD1W6lPharzvu442kyLLi7kO9-gAlKlQThbfzOsvwNiNP90q6hFbRM3_5UZdcZxVfgHbVZcatWlTVSj09O4sBwq6XMu7m2bKbp4vuvLi1F89g6PH_l2U9_5PKulGy_EbJKo3_tT8d9QdBPPZnY8Dhw1CE_nQwBOg6CXuBGESBDMPfo7j-NU7VKhNr7iegkkxyAy5ev_v-uXfz5zfvrj3fu8QaX8qYH9Oi3HoQsMfF26s_PvOuXn3_5tnl1bNXb2-84-fX725OT556F7AAAvgQ3uBPHW8QXHS88xLWgzSql955FsK_6eK35brIwTrAJcFXLtEsw3tviqoGgAYyT_WdKwACIqpFvtAX_iCyFCoqw4LK5eaqCEwYNjboIn6f9ScjEr24--D0BEfo5463axDu7u66yyryayW6oClniCdjeXsG1-DSGdrBNJLq7A_hNcCU68vvukKtPn2zgoEYBOMt0f4FnvjR06iP7Jy7bpznIluDzcdl_vn1iwuQ_vlq9aoAu-17L99eeO9uzncNQ5HFZEdZeZ2FVbUhAXR0GYIlbON_WPwWZDcdZNoFjLiBGk86LewC4HUD73Q8B4yddLYHIBgMeoPe4-VfFiE3LKchoF76EXTaj6AAWZ4BXvX5KswMWK5z6TvG_mxrFMgGnmsbuO10IEZ1hugbEP4b24Qd8m9ues9BpmvvVTqH9oO90MVcvuw6JQAYTSrvYiHvvBcFruTQAPjPBcNI57mLRZrFpcz_6z_-t9Ilc3m_x7cBFF_waCCC2qii9epmc7BWX9eK7_2wYK9vXdQeAEEGKbLyyjTWmLVca91CWAT48xa9QFxo07xGwC9icK5BAZwWrMoiriMQJvy4TQFyrQqwh0mdMQpNrNfkAtgdrpMXb3ov5Og3mtYhjFkhZiR3zAMzkcgS1__GS4Uu5uhjgP6A22WhMEoAel1yIzoP1sUL513hfSSE2tIY7odRQHYVYKCh3i3fGhCZdOp12gmOWQvUNnVgFcWtLH24h8qOiu8dv357caILsQLX8_nv_-mMRq8PClSXHRgzOw7NrOERsW1vaxIVjnLY0jlbozEwIQCth2Vo_GZ-3BkjSX7E3_8TPGwqGXkGQJEloO8cJkvLrgkE7LBigwzDEmtYFWWFy0OBfhGO7xKkBfoKL18_6zgQU7faE7ewsIkwzdJqTUgR8Xa9BDjftBBknZa2iZ5ATTcQuh_0h2fwr5GHpqhjVCjJami1UEVuoK2ZANgHaBYOJ6Nt7JByWyYLdBPJmSoIeILbvWlFJ5PhdDIYfcYyFgNUUGRBiyo66_Vmw6CnjSnNPj9edhfVMtvGA85ydfnSO6anT7z_KaX3ElUGRHyVRwgVTA07F6lWIf_iGFzvFWDfjncDMs_noBL_4t28vrx699K7uHr75vztM7zw7uLN-YvXN_j7B7j0Bv57_eb19Z9fPHv1zPv-xZ8vXr_YIasRYKHp7DNkpVLwIEoYRJJXrc4ArIGuRdLPUtC3cn0mVqsMuo6jBPMHtU-dadXCS0ViVqT0UwWDq3wYcR_mQ7kUEXnIImOxqy15X9tiUNdcwaHWXLfK8G5qgCTgKBL83JL6f_3H_3pbijjFwuDhDRtl2rZJF4oS7EuM9p1rrbxxAMM7Gf03nCS46Jbst1v-iJzqBKZ940q7_q_jWKc5CLbikrcxwmQ0mg0Hs30DpnEzAe4Pacx97EXDcdiTA38wnAb-UI7ADQll5MtJb5IEvb4cydn7o583XD6k8cpcVh_YMdv0_shLgMfudxHuc-R-7OBQ5JIGki78fJA7JfwgiAN_IqOeL8LZ0B9OZpOhHMvRYDg62J2CwvVjFQwBvoT_-coSf2WJv7LEX1niryzxV5b4K0v8MEsM6zX88_kreU_Opv5knMBKPhwmftgbD2IRiMlsMPnFxOhwKMJoMEv8YV9KfzhOZr6YRYEfjqYzkYx6SW8UHk6MOhaS7JExpc18gRtLNGVbTqhrMLvec3C9nygyYToGD9Y4E7mdwoviDu04LlWK5u3vfvc78CNAufNULfGJcxI03tpsVQ5D6hh3sOXeFVEM6RIXaNAVhs0puVW0xESg2aVeVchPXGRyvmSs6iwxWBC3CaynY07AsSlxydEL6W2RgYuIjUReOAUYXEC9SsJDpBw0xwHdVimDKrY8c-h_TIsaOf3uqxXOaO0losvLswmcyDS2SvxGwh3bghTgskKf9ZgMAAhHnWCDqIvW5uEc1WaPuo7LLBghXmnhFWxi9HFNpvzbNd_GKpqV2FRI77e4PV14sxjjDELyyC7KcEsb1aImS0v9zmAqExZMiRWKsBnw82Ne3OU4JfUi7xAjJIz3R8avuoWJfWRU5q0GXwyOQOhvEWapHWpj0B0Zdmzr6emdrNB4NwVrAIMa1dgpjWrvwC4QX0MANpEyw3cXqFdam8zIRkiRkCqh7im-GBbxGmYEzIC6ND4Y9pPhGAot1MPe4CsAEKS4DYAzrAuN2JXGNbCqwoA_CMsYkcRF_qSyeoZTmYa2awR6XVR68b1BuuIZlbpLnnNczkiYtPjEIB0AByKRZhm9k1nmVwUgEHIDAI4QOmN-A0xEcYe0TodXQGoI0QjYvQ6xdCBmAgsKARnWoPuo3NGpVc1LdarpbwQ224Dge1jRygLxOMgPneBUqZpWpPe5h0_A_18hbhLN338slinSo82VG_BjMIFoBSCiuXqZirJc4Jtc1wW5xkhXlbcFzDq1htV0aRrfqvIy_eknhHGqufRc86gW7zGGi0BTBK893nEJPT9pFXQDA-2VQi2cgnDJZT0BxUuXyE5oxIqY86MHw5Czh3dH6-Id0qMVT7_vXWpVkOVQPCKE2NEi2NFih6Otu9la40NkgwDwQPm69dTs9_kPC1gWWvYEV_G80IYgTkuEhMhWkRdl3kbNeKI0pQrLUgjS0z4rr9xNsxw-lsMioCCGeet636IjCugTByhloGM5QYT7GhsjkRoiAI-knkCErqFhxZ2ikevY0EkkSw2nXYTuFXZxdFw31voIFnOiWs8zXH5wiGNqSiZCsC_c7BwDhMYt19wRlI7lxgWugdh-tEvk9vLwbcmCRuNc6WK2JhuINERel2x3q0LQ66xaRII50wTdSSKRdJ2M5qG8GvzcMltj5fwKFsSUE4iIX5fzHBWwQLYWFo0KjCg60oSg08Q1-Wiv0TpIss8AmwncVo-P2F9r2nU_EnFVUCjjo2lkaYFPF8lN8v8Qgy9doMKaiQ4ycsUtMgCsGLn9KAEkRUBOK2tfWxbtV84WmA2icDyc-XI0FP4wjKd-KIcRgNDJLAmSgUiC4SOyBf5phHggIB_0gpk_6c8Cf9YbxH7SHwTT8QyUMQh_MSDv9XuDvhCRP4Ai_eFgMvLD6awH0Lwvot60l0yC0edmKrTQ1y7paQoKyu60JMMM6xfPVfi3Ov0pkxWx5b1g1Ov1B_3-6MwJ-_hgO5Vv2050ODbU1w31kwzWMB_MTbwjYuv0_6n3TiGtYV0GVg4Xs3jfYVlUlPfv3v_gtu1gxykObNiBbal6xy9fn59sKPk3iO4QLvNrFoPv9wkse6XBGPvLLqTdIMFn8L_JZDh5XNhiXlCEJxT5RxoGCvecXX4bBNPJ8BCBXrUW2x0eGcgS1_RvoYYdwtwAiS65KzTB1bBytJ4KHCoAhzKHmqyDAx7Dip0GDa6PFfxdL09omMOyyKMFzX8rYPCJiDFzHTURA04E6dLQwIu7hIyJMp-RDSLWRZSleRp1i3LOYvZxgc8AYWC6gav0GH_0S-iSPHNWJ3hp7veDYDyd9IP7hsY7pgAmFXDi-azkesJ4vwcQgOYDc0OgTd4FNWrHyDiebePoNa5h4boxBEEcP83GitD95ogpgDeK3O6JRuMoEYKgRZ1xyhO1S_7j0fiROo7yv5PhMnY03BH3_aJ8iU60_ORmKbDpIMikTsw8aFmSbre7Q6K_8x5VMozQdtH8xEsQSNdD98sYIzdUTmQVOHXfbLjfa0aqobRPaNzXIC-cdLBmy3JJOBmGnsbDIDSN6nBxL7l-8Mo8tShqwMpXnqrQSM1ds2fbaJMHHcbdXXJw6rbe3LAMxm_b8BKJYXaLwXqQNuYqutsNULIkEH9v5fxWYbqGBSKKbz3zdsvF0bx0u7Au8u0bcFsAnIfFj4P5G893qCYkiKOoxk7CbBKqJqc-lpg3RiwsXZNmuihXHex4VCArb7neOXygBklB_jAW3OoYBmKIZnlJnj6SQyLDCN5-ZTCl6f652tgC_hpxaF8hKyrLQXW9P-8tnIJpsBhTQejvmUJ1Tyuklt0678hZbDkNxAGUUuuH9hpdTxG6UN1J8BJbmTtmOlqTpnYJOi6wRVfeMlVEYmLsY0Oldpqy_nT6OFO2WkbdPArTVnYnRhKiTKqz65cXo0l_2J9Nt7HQmyLbbJOx3IDmYUFY6vBGtCgxF9KsmVXKDOhuk9Z2-3EkC03_o5nt2MW6IQd3RepMfOAeuOMxeWUNl04-Qi5CVvzSLgkPxoPp8IG8gI1MXXhvuDNhAGD_bBzFPvhEfX8oZOAL0Zv40SwZj8dJfzbrTz87YeCzkfqXySUYJNHUByw58GeTXs9Pxr3JTAyG4-GvkJodjEE_gz6U2uuDrzmMen7YkxN_JEUfHM9kLMWv4vBs-zM7hprn3xd3dNQ6Fyuw0SvwSuEX4RA9a8_Qg_XBKhEoavk2ReLfB1Paq9rGatbyPXzvmiv2brghO8HJ4eUxF5dW99O6OE1rjHfeR9gyO7ZJ1qLNYfGw7Y9lRhFFivxjUiiAJYrd7V_DO7Qs68gABx8FWjxccaGFAPxTZKY8EWKwIeU9ol3vdW7jmIRUEjIDeQX943wtGd9XK0lkkzqOMfiyhIqrbgvVYP8FQwYMb_E6Q_CUhmEpK2hcphNdqEkYFID5D6tNRTm6UVlTANmh4Zwlur2I8pIJr22yfsgxGh8DYf0WQndpQU58QaotZSq4JQzqEWJMzqZtZWDYID2iF1hhKg7_uImSiOWk_KgrzMAdI7izSR1SNlmJjbmCaV4vMYrX0Wv-xlgI0B9QnrUO4GJOqdVXUlKHlbbLCiX4UlDGiaB0tL4jFET4YrRmD7VkGNoHhyXRhCWSpOz2cqfbsWtqa72FKjogVgxTUX8OYHUpAoVivI993UEt9AJYAfqP97rmRRGXn8jcOa1u-bquxftGlSrD3SjnyfLb18Xqsrx-8Wwdzm6L5Xfn7-rr4E_T7I8iDV7dXfmzb__6PH39dt1brvOrWVz997_-IF5s2cjhTpfrpO2tAfD0bhjK_QHB5TmahB0m8qDCYMyaQry__x-v17UhGoV_97s6cIR_DLpNSAf_HnZtdKjLiUU6vRdpkDKVoPgwt3T4aGuYguGg35t8BjvRJPmq5NPe4dmd5-vKxJXEU526Bv4rMfMd3rfwFnzLB5J-X6AwtIuIcxI1umVmQFBGCPzbkaDZVkC_KREOfuQscCjsVsfo8KoyMTD6ww3VbW1CmY1Ho2BvgulX2uEr7fCVdvhKO_wz0A7T_mA0CT5jPx2KKC14Lx1xxiID9ySNMdR9gHXDe989e-WGDlq26_feJfPS_47LJdS0w5Jdbkb3OSsVvGV4DyE0KYqLdyjTAKPFnJClFbdM1UeyQ7smJUNcegTh7a5pe2wi-ArcxjO1EOg-0rgjUT7vmFh0E_Q_s2vUCbU5lLZJMacTGNZc2FQ00K7czVSwG6eaTGFKPNjILzDhcmoKvgSOEiXT46x02HVm8G12wD70uLlBTF8uVmkBhgRXyyZhQecAl46EdMYCeGNraCL8VeTyBFaTLCoWRYYOQpn-tRa58I7BpuUiTBVuGSUniEYok3LFGbOfaH-BLVlkq1L8VGRiCR5mAT_lCn_ClRWM1RJKWdYKPUholfjEe09tq6BWVWDXsA3ROsqKUOY_iRXmVp_oDN1WUkbzqqzSMv2J-hSnq4XMsWf01EnX-46YBJJeSQ4MXIdCShv4pt2Pc2jVIPCxmnHgL-d25q7aWd5aaAvoHqofJvfmOixGxasiq1ldwJnUeze9sd_re2uJ-cdY31ziNrYKnkbnkfPDcMp6d1BQgnm7mMcqctYq6-OiEYqR04Cxws10c1o_CNP2gu4Amz7r9r3lizPoYV0hTi29j6D6JXkkOqWHphL73FavcVFz9zlE6G9i5nnj1tdkHjilh-OK4KNy9g3-sZXkQ-MVo-LZOdqBekpjKcFzCykbDkai5lrTnOaaTrvXnpUAfUbaoc5EqWtR5HqBEFagLaAe-AoeC9VKnoOJs2sbWR8B-fhRu5JmoeglmH6RxLPQH47EwJ-Opok_iKPeMBoHsj8YP5pkrGCyRvCYdn3h9i7a8cuzisNISn8SDwf-LOxP_ECI0UyE0RBPqPilO5S-ZiJ_zUT-mon8NRP5ayby10zkr5nIXzORf3uZyHt2hT0iDdQ_MHTKZw48IrcUgKKsDg_NOqBMd-SDE619W-C_j9x-fmAsxWCUKvtgAOq-IPgmGgX_ASxLDO-BV4xyO3LIBuwzPA__MW-AmAmKHz0FIN4bjsf96XA2Cwa9YDwhuPozAlaS_ChIJpPpKARQGvT9YTIQ8Gs89MP-tD8U_Wg8HsrD49Ht3ba8b9Fg0faxLIeAUTY1dEoN6yHixBTWDDY1tAcRUQMhH7K2axtO6-hzSGhFUcZL3G1UUGvjWvLOajq8xGxtt0xlE4DUCMiFxTpIi4OsC9iZxMA7MHW0rzl7h8nlPYG0BxD2hrzNVvYwKxhAmA2pGrubJzFZBfRpSWHGlTk3hjIdwWFdLutc6sUPlnu7zTlFO5dp0ib3TD4Bio2lL3PlcHdpWaa0S5w7yPFD_RL5uTh-pAbbY8c4gGCW3U7dsXupuUBa-9aeXEsOhWqghR4Re7P6cJnGqQXNAWfIPWxB20rSBn1Mk94A3l4LWpFGSrjNYoRASVqqymdERVLefE0TsCqd54RhUfmXK3Qa8CwggFW5UBgjL9MVjfV161LblxPaT9fHBiBOLZCtVgwAJNPH7DBYB4kLWwmas4pKxb3ld1qhAWiagH-1KAvURh63yqqPk6RUlel8Lksm09vnI3x3vySsIADMkZ8CQ7IoMrhFEInV3ZyasJQi1zOkQS4FnahVrxyvSKcFtLsICAGTFRyfSyzRulgnq8MlZxSSNwkVjtDt2Q1wsy7z5uwu1ZwK0N0Nz_LCUCoEu6DB2AYdoKCxxDOwSj7pSG-h3m2j2iYwl3eobQoPOIjvEbJoeSGJ1ehmarHGJ1hey9BooehRWiIwupPgJ5Z7hor3lnBwp-QoBPmlLR_IjkJbwKxKi9ZEbKSK1u7GtJacQhnj9bcLaZkC3RudEd-WQVuE1Matc0V4LE5P-cHmAIh2O9mb5LMQGLduWg7WB820bJgQskkiZiTFR0Q4OqltE_5sawlarnaHbFYJzQNtsU5PG8MIPiRK9PTU2Ec6ruMhr_CBCdtpDmtxgofkgdd01MzmYmpDNQwamyUaxcsWozlJcZdTuO37XTasPu1WkTG11D2jQni3kg7a2wxtuosO9kRPurvFmtec1okl2mdItWXamFGE6XlHxvuj3JwL-P7InLMBPXinkPbHh7WixLcp6hSyvey20blqXrEipxqR9i02JFrgtIIVMCEiWphFe9mctwJ3XxZ1BcrybC31WvqqMCd1YG7MUu6bpEwclAhxYCpszEKrVxk5LwXOe4okMz9A2TigmyR-JwGraZlxgdEv5EvGBW6ufJvVJfILf6R0s-b6ZZokuCiDG_sO1hNabti_5IBhqo-RwQMumAmhpCfNwZOnhQcyYszc0NcPrsU0dZiTqGrCfaqeEy9D2tkgsAydbBOYZBPdro031jkxLBMviwpY5zkBWGKYkB-NKbs4FRtYBGNHCCN0qIHm7KWFoUruwYRcO2glL916RZUYtMXARrOsWFtsh9CAZUYQ7fSpJobCU19LdQ9Eb0977bbvn0bWgsYy5AyCZWEdzi0fVZl8Z2G8a5zfTsik5ejujOe1I-M44fEkQdd3dvpOVkp3_kvsmd19StT_N9tnxUz2Z4NB4IcimYLfPAv86SgI_ZEIZr2wP5b9IPhVt8_-9uR5aGJ5ICN_IgcYAkJ2YTQRsicmwSgY_uLE8n7c7w2CnvDHk17gDwejwBez0cSPZNIb9SM5iZNHOPLvVjHN06qIYYFImWH6y9-e6CeePPWefIlxetLxnoDRqGqFNaT5BzALc6TenmBqhlv7AwO6UZI-g26rlGfYYEpd2T_6Bxb1AoV0j44cVsobsONgqOgQp5RzYjnJqZHsvpJ-3LBcd-DGyQ84gGo7JIoXUXW4HAqiWlkzefUFZ-MRqm9TxUNDidbKNFP3dqOEg4ZxXzFbF93uPzSqD5dwyIgiO_olQs7jaRSDvQloI8vI740m4yEYnaDfn_3ikPOeYXcZiwcOYt7nQBwQhUZVKXFL134ts8HpPQ3VOsPO5dYz1A21zqG9lQ49Wp6MqqjJh2VXsuX0VhIZAeYpnXz6hrPhSLhzcHyHCA-9UYCD2G63muCD8er20oHQsSd74-madCLCA2CooX3CUqQ6_QXHHKTq8ByW3nmuQflW-F8f2Ee0Nr_4LRYIzeDI7gWdNn96-pScFbdQ2vDONWYN-whaUGeZ8IoQITcoY0fnpbTay9QkHvxtN2mn7VB_tQChLVCvzFF17bpzpmgAegp3nwYgSLMtgb1GJ8ir2S_ZhPZfvbw8997ISK4QgZ4D-p0XmPCE3X2dk0OVSc6nyeStzDrUZGJnWVavfNS5deZf-kJhL9E5PMZiTxD1UrnW-9JsBQmUWK64wFargqKuRC9ojgrpRrA0JAo6gZbTaQEcE3_J_bDnazZRPX2SuqGGWYM1DtA5bxTIg5olpzKZeHRlPFGMsPqN3lsCvbQ-EnIikT4JmeOW6DBXWt4O0neOvMQMMdWoP-WBtjMILrFFJo3gGz0ZttIHLBPUjh1QLD73m3yCTnN8v8sCmTmpA_IbMrAx-eZ0AGryd0gLeW7hcOH90R0er2GIoCZJwWYuYMvwpEjmLA2HsmUUOCCpO4vNcWSIx9ZuJkkYQmQjrwEcLVo03bQFQ_0a5nQXud-1R-zyW3wgqLMAI83QMAxhDW4W9IonM-59c478YN41Im2FeW3oWSdCaUOTKEJTKtrjzDqhJI5VLmvcZSUwJ7EtfSPxjcM16LWN7VNEh6g6pZMyKZqemtQQcwhvQ0bbQz5b5-1iFVmjuPvpuB-cuaB0FF3GHTOwG_u2KHSyMylj78ZCJ6jChvtUn63stgQMlzHqDfmm_24yHpqcC-r1rU232E61wCsXmHmYroRZpU5PaYvL_dXDSwlx4ro6Tslo6n8jVYWMc3PlilSSv01gBX4eGr7mNYgHzUiTgNOi7sG-izsm8HRMwIwUyhpHQYS0RdIZKBh_MkzMly_S-cJkkzpzkIfQ5sSs1DpamF3i20PjYTY10sTmkw3E9WDSEmUHJJ6s8aNAKS-LlFwRcaINcpJIlSSSCDecbchXlkVYgMFfregM4iMOGhIWM1m3pnkggRhTyctCa7OZXyYJXKcHcAKOzZ6wI_ZGrNKY8qrABsGiwVefg1RwxSti2mmJ2ye0nsj0JzxH3w6nTaqLJduTwqrCUhgwB2qhYyX7YZve89icvIKdaTDaxp5HAgsas62djfWUiNVeFVwUZ3HHfceGW94UMUt3z8ZhmtC0FJpjdpvZn96vqPt3YNoYC666aitwsUyVmRdGFeyOGZsZYneDcyYM7zrVDCwvR3vIP9CojrtTRLQ3gz6QoNIi8kziyLazM5r0p2EUDvzJQPb8YSQwhaE_8IMwCGeDUZDE_fifjO-ghUxCM34h27G_nM_gO_YX9jjGY385j-c8nLI-i_X4wvSGQzTYlraJguZy5zFEyAFlHEaFtOmTB0mOvR16JM2xu5wvw32I2VD4k2mv74s4GvoyHIQRGIypiPuHc62vSXYlWkfjAf-amnI_RfEU0PulqetZU9eula_TBGhFGJacsECLCRnj7bMANk-pP5ihMSchaCbjYJIEN59E5Gu03Uq7RSqkIwUat4rWoaqJcIpsDsA88o7bLuYJb38hn_KWlpKVLCuM7jlrassr2vQm95Mprs_nuFwdjk3azPc2ndPe1LDriMTUJpRFuzOOjy9e3ZyQiIWTfeb6__bwosPpEuxTr0ufeyB6gJN7QSFNTJ2Q7eau0Q61zVAKHONW9AUAzDDavyFiV4PX-stjKabB96kpzzJ52-QasSv_1lA32KgWxyNbT99P8fDxGClaGbgpyyUzF3bzg8P0NO3iDJE2PYLDYJVSVQVnINlsLEqZ0ylTRW7V2KVjtKvtJsylOPkH3ftIJOz9eWWi8hXoEe06dZkkphKpgONdVFJDIqGC6nLNCTNWF-8s95dC4_lTf_TpDP7MmYNvHXDZwUmFLg_Ppg69EacaZ5ovEhlvppjjh0udyfmrcDm8h60ZflrdzEFeSOrsxfAuqYNvfkxz-kZda-PFI2ke_fGMxZqeTnbSDt_gmG5TMseizQedsInQuWQhEjLKckHO2ZM2y8_dm_NZ_E6aJ7zGctrMbnZnuz_GcdQLhnO7ldOaYWZZuUzqzLAoLivEQyfIRW24JvdczZ3UkGgZHtuBrk0iwQwA9kMoQZcTEBIcaVInsw3B5PDanQhp-xuVS_BZUt-knEXmu7H4zcJmVwKvhs5xSbBIlTbBtE01HW9yTSemf21uafMDT5an3jEO7U0cjyWcDiBf9zFRlInb2jB04A6hHUdf7aWl9NaTNi1F-yh2kVIdy0gR02qONqlXCmbYIxkpp-b9jBSx21t81Bs8WgU3SFSY5TXnelqb_s83vHLiSi6JUUKxEnelG2AMoCV6iI1i00cswA5aySPr9RA_pT_j6UIcnEUbmY_38kpgtojRVh_TqsqYaOLOcPVtCrik8wqcwwU2TUXDQt3LX-o8MmfFQeeC8uLOXcYM4Xq0WFrMAnYVd83gdnCsucTjFqomre15i4CjL5xJyVvaidzSNDda5MqccEJpfmhybCnPNE3XZLydzzVE4P7iNvTCvX9lk8kaCo1Pb26RZ80LLwqlP61YlLFub3P3RifewZIJyMG5fidtsp2p2GzZiQRNdKWZuY7GRLFY0j56TmUT1aKrdbKWBiq02VLSzQ7nWRoqx6SA4xdmyQD7DmFkT1kI5SLVxJVeUrhanbVHSdhUTCbuCFCBCvI3mbEVSmR8TAsAjtKYkytLnl3o7Y52ZN1M0-3NbpYYNdvY9uxW28jqQ09AM5jNfrGX56-vlHcM1qXgvRTFpzQWlPS6SEM8DE7xIdA3N2_wQQVIl-cyTJKiAtyGUxCgOgUYmnea3FnnOID2dDOzrAmdIHyizwSbksGFi9GZtNp7oZk6QYeRaJLu2iHp9EbpJkVvzya0z8zNa-jwe3cIuV8oZqbUPafAIvvWCXsEBcwhDM2o0m6krX2I7c15nOa1bwvbIflX_oGkpd3CdmhSl9nCdmD5v_YWNs2sHf2DCdNdNzreo3jUA8s5jEf9jRKmO_cTGs6rc6QPgEI10cOGOwuboulGe9zw0qclaQyIABWYPvTbObID11B_zo-mTp37D7_sqMBvHpTdb0geAUPkNVWz8FvPIp-PxeVr7J6R_fa2yZ0VlSRs-GFEvSUN_VKz6bKn91gexFPGw2jsT6ZJ4E9jiV8ilL2hiMLRKPjlx4JcOHPITczasqrkyKwbKKgs6aeYzmrnkkMxUu8xEy0vSs-kje9f8o4o2njTssW7vlfMDzdbXejbmmDoJX11W--VtF_J1O4eRXq3vqtKsc4dX-Pc_txx-wPV3m_l68cOPtlNEBPU3c4IOXbYyBPPfoSaKDTBcOkeStESYUxhcQoGmHx7PojxdikB4eDTK1ocij587np37NJ8O9jdq289PVYBPtLSkZD7bRYUy45Pp9zvXT_y88kbB7LfyaqzfR6JeazxmduuMrOFjTecbydVYLNUcxKq0-ONbyKzMrQ_tszH5eGZEUq7Ebe46zHbs3XSGXSFDTUnyjjHl7j93vstZz4eMq-V9Vp0fiGfr7j5eecHtMD1rLf0oNmC03aTHDltfwG6OYSEnVtdk7OrTe8LO-TDzpuHEDfTave3pfVHmD9rq7aJpdht2DGfUClyU35z2oj9dvrDUwvDFLzFjFw8I2FrWnd9tJrSaHbZ7y_x3er_l1-qRmflsG9V_2O-Vv0b-V71b-SL1V_2m9Uas82CWTKYybGfBADKhpNw6IskEH4wDJKJFJNR2Jv4B35a2rp2hxTqunYHlv9ru3b_pN-HPODMlPt8lcYfaXkXbYjfeYx6HHjOymerx4Hl_6PV4ze4dW-XpnyWg3uQ0vz48_8FIFx5bQ)
+
+![multi_agentvis_image](https://raw.githubusercontent.com/kumarniteshpersonal-beep/agentvis/refs/heads/main/packages/py/images/multi-agent.png)
+
+## Current Capabilities
+
+1. Currently, **agentvis** generates reasoning graphs for both single-agent and multi-agent systems. Multi-agent setups can provide deeper insights, especially as many modern AI applications are increasingly moving toward autonomous agent architectures.
+
+2. At the moment, we also attempt to surface certain connections that help explain what may have influenced the LLM to choose a particular tool call. These insights can help identify shortcomings or missing context in prompts or tool outputs.
+
+## Current Limitations
+
+1. As of now in **agentvis** we are only supporting *langchain* framework.
+2. Our *why tool call* capability is currently intended to provide an initial indication of what may have influenced a tool invocation. It is an early feature and can be further improved if there is strong demand for deeper insights.
 
 ## License
 

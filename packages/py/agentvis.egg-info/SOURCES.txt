@@ -14,6 +14,8 @@ agentvis/core/connection_creation_strategy/base.py
 agentvis/core/connection_creation_strategy/context.py
 agentvis/core/connection_creation_strategy/helper.py
 agentvis/core/connection_creation_strategy/strategy_tool_to_tool.py
+agentvis/core/exceptions/__init__.py
+agentvis/core/exceptions/main.py
 agentvis/core/export/__init__.py
 agentvis/core/export/base.py
 agentvis/core/export/json.py
