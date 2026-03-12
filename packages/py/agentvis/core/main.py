@@ -1,6 +1,7 @@
 from agentvis.core.models import LLMMessage, Frame, Node, MessageType, Connection, AgentGraph
 from agentvis.core.connection_creation_strategy import ContextConnectionCreation, StrategyToolToTool
 from collections import defaultdict
+from agentvis.core.exceptions import ToolMessagesMismatchException, MissingToolMessagesException
 
 class BusinessLogic:
     @staticmethod
@@ -8,6 +9,7 @@ class BusinessLogic:
         frames = []
         tool_msg_start_idx, tool_msg_end_idx = -1, -1
         function_to_args_map = defaultdict(dict)
+
         for idx, message in enumerate(messages):
             # if tool message, store the start and end index of the tool message
             if message.type == MessageType.ToolMessage.value:
@@ -16,7 +18,17 @@ class BusinessLogic:
                 tool_msg_end_idx = idx
             else:
                 if tool_msg_start_idx != -1 and tool_msg_end_idx != -1:
-                    tool_nodes = [Node(id=tool_msg.id, type=tool_msg.type, data={"content": tool_msg.content, "tool_name": tool_msg.tool_name, "tool_args": function_to_args_map[tool_msg.tool_call_id][tool_msg.tool_name]}) for tool_msg in messages[tool_msg_start_idx:tool_msg_end_idx+1]]
+                    if len(function_to_args_map) != tool_msg_end_idx - tool_msg_start_idx + 1:
+                        raise ToolMessagesMismatchException(f"In last AI message there are {len(function_to_args_map)} tool calls but got {tool_msg_end_idx - tool_msg_start_idx + 1} tool messages.")
+                    tool_nodes = [Node(
+                        id=tool_msg.id, 
+                        type=tool_msg.type, 
+                        data={
+                            "content": tool_msg.content, 
+                            "tool_name": tool_msg.tool_name, 
+                            "tool_args": function_to_args_map[tool_msg.tool_call_id][tool_msg.tool_name],
+                            "subagent_ui": AgentVis.build_agent_graph(tool_msg.subagent_messages)
+                        }) for tool_msg in messages[tool_msg_start_idx:tool_msg_end_idx+1]]
                     frames.append(Frame(nodes=tool_nodes))
                     tool_msg_start_idx, tool_msg_end_idx = -1, -1
                     function_to_args_map = defaultdict(dict)
@@ -32,10 +44,15 @@ class BusinessLogic:
             
             # if ai message, store the function calls
             if message.type == MessageType.AIMessage.value:
+                if len(function_to_args_map) > 0:
+                    tool_names = set()
+                    for _,args in function_to_args_map.items():
+                        for tool_name, _ in args.items():
+                            tool_names.add(tool_name)
+                    raise MissingToolMessagesException(f"Tool messages are missing for the following tool names: {tool_names}")
                 if message.tool_calls:
                     for tool_call in message.tool_calls:
                         function_to_args_map[tool_call.tool_call_id] = {tool_call.name: tool_call.args}
-
         return frames
     
     @staticmethod

@@ -1,5 +1,6 @@
+from __future__ import annotations
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # models for tree structure
 class MessageType(str, Enum):
@@ -11,14 +12,14 @@ class MessageType(str, Enum):
 class Node(BaseModel):
     id: str
     type: MessageType
-    data: dict = {}
+    data: dict = Field(default_factory=dict)
 
 class ConnectionType(str, Enum):
     ToolToTool = "ToolToTool"
 
 class ToolOutputMatchDetails(BaseModel):
-    target_tool_arg: dict = {}
-    matched_tokens: list[str] = []
+    target_tool_arg: dict = Field(default_factory=dict)
+    matched_tokens: list[str] = Field(default_factory=list)
     score: float = 0.0
 
 class ConnectionData(BaseModel):
@@ -48,6 +49,7 @@ class LLMMessage(BaseModel):
     id: str
     type: MessageType
     content: str | list[dict] = ""
-    tool_calls: list[ToolCall] = []
+    tool_calls: list[ToolCall] = Field(default_factory=list)
     tool_name: str = ""
     tool_call_id: str = ""
+    subagent_messages: list["LLMMessage"] = Field(default_factory=list)

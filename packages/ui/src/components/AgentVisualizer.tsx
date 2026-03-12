@@ -50,9 +50,9 @@ export interface AgentVisualizerProps {
   graph: AgentGraph;
 }
 
-const DEFAULT_NODE_WIDTH = 320;
+const DEFAULT_NODE_WIDTH = 340;
 const DEFAULT_NODE_HEIGHT = 260;
-const TOOL_NODE_HEIGHT = 380;
+const TOOL_NODE_HEIGHT = 400;
 const FRAME_X_GAP = 80;
 const NODE_Y_GAP = 32;
 
@@ -99,8 +99,13 @@ function toFlowNodesByFrame(
 
     for (let nodeIdx = 0; nodeIdx < frame.nodes.length; nodeIdx++) {
       const n = frame.nodes[nodeIdx];
+      const hasSubagentUi =
+        (n.data as any)?.subagent_ui &&
+        Array.isArray((n.data as any)?.subagent_ui?.frames) &&
+        (n.data as any)?.subagent_ui?.frames.length > 0;
+
       const baseHeight =
-        (n.type as MessageType) === "ToolMessage"
+        (n.type as MessageType) === "ToolMessage" && hasSubagentUi
           ? TOOL_NODE_HEIGHT
           : DEFAULT_NODE_HEIGHT;
       const y = currentY;

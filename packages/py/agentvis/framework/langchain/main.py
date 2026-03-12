@@ -7,7 +7,12 @@ class LangChainAdapter(AIFrameWork):
     def __init__(self):
         super().__init__()
 
-    def convert(self, messages: list[ToolMessage | AIMessage | HumanMessage | SystemMessage]) -> list[LLMMessage]:
+    def convert(
+        self, 
+        messages: list[ToolMessage | AIMessage | HumanMessage | SystemMessage], 
+        subagent_messages: dict[str, list[ToolMessage | AIMessage | HumanMessage | SystemMessage]] = {}
+        ) -> list[LLMMessage]:
+        
         _messages: list[LLMMessage] = []
 
         # convert messages to LLMMessage
@@ -15,12 +20,15 @@ class LangChainAdapter(AIFrameWork):
             tool_calls = []
             tool_name = ""
             tool_call_id = ""
+            _subagent_messages = []
 
             if isinstance(message, AIMessage):
                 tool_calls = [ToolCall(name=tool_call["name"], args=tool_call["args"], tool_call_id=tool_call["id"]) for tool_call in message.tool_calls]
             if isinstance(message, ToolMessage):
                 tool_name = message.name
                 tool_call_id = message.tool_call_id
+                if tool_call_id in subagent_messages:
+                    _subagent_messages = LangChainAdapter().convert(subagent_messages[tool_call_id])
                 
             _messages.append(LLMMessage(
                 id=message.id,
@@ -28,7 +36,8 @@ class LangChainAdapter(AIFrameWork):
                 content=normalize_content(message.content),
                 tool_calls=tool_calls,
                 tool_name=tool_name,
-                tool_call_id=tool_call_id
+                tool_call_id=tool_call_id,
+                subagent_messages=_subagent_messages
             ))
 
         return _messages
