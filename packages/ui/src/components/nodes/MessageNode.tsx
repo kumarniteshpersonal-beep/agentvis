@@ -576,7 +576,8 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         minWidth: 220,
         width: 340,
         maxWidth: 340,
-        minHeight: messageType === "ToolMessage" ? 400 : "auto",
+        minHeight:
+          messageType === "ToolMessage" && hasSubagentUi ? 400 : "auto",
         bgcolor: "#ffffff",
         borderColor: isHighlighted ? "#E0531F" : "#e5e7eb",
         cursor: "pointer",
@@ -714,7 +715,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
           fullWidth
           PaperProps={{
             sx: {
-              bgcolor: "#020617",
+              bgcolor: "#ffffff",
               borderRadius: 3,
               overflow: "hidden",
             },
@@ -747,10 +748,10 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
                 <IconButton
                   size="small"
                   sx={{
-                    bgcolor: "rgba(15,23,42,0.85)",
-                    color: "#e2e8f0",
+                    bgcolor: "#ffffff",
+                    color: "#0f172a",
                     "&:hover": {
-                      bgcolor: "rgba(15,23,42,1)",
+                      bgcolor: "#f1f5f9",
                     },
                   }}
                   onClick={(event) => {
