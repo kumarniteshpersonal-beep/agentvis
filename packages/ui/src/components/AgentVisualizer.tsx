@@ -99,13 +99,8 @@ function toFlowNodesByFrame(
 
     for (let nodeIdx = 0; nodeIdx < frame.nodes.length; nodeIdx++) {
       const n = frame.nodes[nodeIdx];
-      const hasSubagentUi =
-        (n.data as any)?.subagent_ui &&
-        Array.isArray((n.data as any)?.subagent_ui?.frames) &&
-        (n.data as any)?.subagent_ui?.frames.length > 0;
-
       const baseHeight =
-        (n.type as MessageType) === "ToolMessage" && hasSubagentUi
+        (n.type as MessageType) === "ToolMessage"
           ? TOOL_NODE_HEIGHT
           : DEFAULT_NODE_HEIGHT;
       const y = currentY;

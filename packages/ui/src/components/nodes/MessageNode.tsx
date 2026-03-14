@@ -576,8 +576,7 @@ function MessageNode({ id, type, data }: MessageNodeProps) {
         minWidth: 220,
         width: 340,
         maxWidth: 340,
-        minHeight:
-          messageType === "ToolMessage" && hasSubagentUi ? 400 : "auto",
+        minHeight: messageType === "ToolMessage" ? 400 : "auto",
         bgcolor: "#ffffff",
         borderColor: isHighlighted ? "#E0531F" : "#e5e7eb",
         cursor: "pointer",
