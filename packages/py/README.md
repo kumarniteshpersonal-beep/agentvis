@@ -6,6 +6,20 @@
   </picture>
 </p>
 
+## Problem Statement
+
+Building agents is easy—you define tools and prompts and the agent starts working.  
+However, making them behave correctly is much harder.
+
+To improve agents, we need visibility into what happens during each run: what the agent did and why the LLM chose a particular tool. Understanding this helps identify prompt gaps, incorrect instructions, or tool misuse, allowing us to iterate and improve the system.
+
+## Solution
+
+To address this, we are building tools that visualize and analyze agent runs.
+
+You can check the **[Current Capabilities](#current-capabilities)** for what is supported today.
+
+## Introduction
 
 *agentvis* visualizes an agent’s reasoning trace and run, giving you clear insight into what’s happening behind the scenes and why the agent chose a particular path or triggered a specific tool call. By surfacing behavior that is often opaque, it helps reveal the factors that may have influenced the LLM to select a particular action or tool.
 
@@ -17,18 +31,9 @@ By exposing the influence flow behind each decision, it transforms opaque agent 
 
 ## Installation
 
-Install core:
-
 ```bash
 pip install agentvis
 ```
-
-With LangChain support:
-
-```bash
-pip install agentvis[langchain]
-```
-
 
 ## How to generate an agent reasoning graph 
 
